@@ -2,7 +2,7 @@
 
 # MPV Remote
 
-Remote-controlled cross-platform media player for a TV connected to a PC. Such thing exist in a case like when a person plays a media downloaded in his/her laptop connecting to a TV via an **HDMI ** cable. In some cases, the PC is used only for media playing. This is quite ridiculous and if we have to do that, shouldn't it be done in a smarter way? With this **MPV Remote**, the user doesn't have to go back and forth to the TV whenever he/she wants to change the media.
+Remote-controlled cross-platform media player for a TV connected to a PC. Such thing exist in a case like when a person plays a media downloaded in his/her laptop connecting to a TV via an **HDMI** cable. In some cases, the PC is used only for media playing. With this **MPV Remote**, the user doesn't have to go back and forth to the TV whenever he/she wants to change the media.
 
 This media player is made controllable from a client device like a portable laptop or a smart phone via **SSH** connection. This media player is derived from an existing open source media player, **MPV Player** which can be seen at [](https://mpv.io/).
 
