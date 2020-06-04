@@ -28,7 +28,11 @@ static void get_exec_path(char* buff, size_t len) {
 
 static void write_command(char* cmd) {
     char cmd_file[128+8];
+    #ifdef _WIN32
     sprintf(cmd_file, "%s/command", exec_path);
+    #else
+    sprintf(cmd_file, "/tmp/mpv-command");
+    #endif
     FILE *fp = fopen(cmd_file, "w");
     fprintf(fp, "%s", cmd);
     fclose(fp);
@@ -58,16 +62,12 @@ int main(int argc, char *argv[]) {
     }
     else {
         FILE *fp;
-        fp = fopen(argv[1], "r");
-        if(fp == NULL) {
-            printf("Media file does not exist.\n");
-            return 1;
-        }
-        else
-            fclose(fp);
-        
         char play_indicator[128+5];
+        #ifdef _WIN32
         sprintf(play_indicator, "%s/play", exec_path);
+        #else
+        sprintf(play_indicator, "/tmp/mpv-play");
+        #endif
         fp = fopen(play_indicator, "r");
         if(fp != NULL) {
             fclose(fp);

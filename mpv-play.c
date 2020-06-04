@@ -36,7 +36,11 @@ static int move_time = 0;
 
 static int read_command() {
     char cmd_file[128+8];
+    #ifdef _WIN32
     sprintf(cmd_file, "%s/command", exec_path);
+    #else
+    sprintf(cmd_file, "/tmp/mpv-command");
+    #endif
     FILE *fp = fopen(cmd_file, "r");
     if(fp == NULL)
         return COMMAND_NONE;
@@ -90,14 +94,6 @@ int main(int argc, char *argv[]) {
         printf("Pass a single media file as argument\n");
         return 1;
     }
-    FILE *fp;
-    fp = fopen(argv[1], "r");
-    if(fp == NULL) {
-        printf("Media file does not exist.\n");
-        return 1;
-    }
-    else
-        fclose(fp);
     
     get_exec_path(exec_path, 128);
     
@@ -121,8 +117,12 @@ int main(int argc, char *argv[]) {
     
     // Let it play, and wait until the user quits.
     char play_indicator[128+5];
+    #ifdef _WIN32
     sprintf(play_indicator, "%s/play", exec_path);
-    fp = fopen(play_indicator, "w");
+    #else
+    sprintf(play_indicator, "/tmp/mpv-play");
+    #endif
+    FILE *fp = fopen(play_indicator, "w");
     fprintf(fp, "play");
     fclose(fp);
     while(1) {
