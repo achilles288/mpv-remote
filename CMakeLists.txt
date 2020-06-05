@@ -16,7 +16,6 @@ include_directories(${CMAKE_BINARY_DIR}/lib)
 
 
 
-message(STATUS ${CMAKE_GENERATOR_PLATFORM})
 # Uses an external library libmpv
 if(UNIX)
 find_package(PkgConfig REQUIRED)
