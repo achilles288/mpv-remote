@@ -4,7 +4,7 @@
 #include <string.h>
 
 #ifdef _WIN32
-
+#include <Windows.h>
 #else
 #include <unistd.h>
 #include <libgen.h>
@@ -19,27 +19,15 @@
 #define COMMAND_QUIT  3
 
 
-static char exec_path[128];
-
-static void get_exec_path(char* buff, size_t len) {
-    #ifdef _WIN32
-    
-    #else
-    if (readlink("/proc/self/exe", buff, len) != -1)
-        dirname(buff);
-    else
-        buff[0] = '\0';
-    #endif
-}
-
+static char *temp_path;
 static int move_time = 0;
 
 static int read_command() {
-    char cmd_file[128+8];
+    char cmd_file[128];
     #ifdef _WIN32
-    sprintf(cmd_file, "%s/command", exec_path);
+    snprintf(cmd_file, 128, "%s\\mpv-command", temp_path);
     #else
-    sprintf(cmd_file, "/tmp/mpv-command");
+    snprintf(cmd_file, 128, "/tmp/mpv-command");
     #endif
     FILE *fp = fopen(cmd_file, "r");
     if(fp == NULL)
@@ -95,7 +83,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    get_exec_path(exec_path, 128);
+    temp_path = getenv("TEMP");
     
     mpv_handle *ctx = mpv_create();
     if(!ctx) {
@@ -112,23 +100,67 @@ int main(int argc, char *argv[]) {
     check_error(mpv_initialize(ctx));
     
     // Play this file.
+    int is_from_web = 0;
+    double load_timeout = 10.0;
+    if(strlen(argv[1]) > 20) {
+        char buff[9];
+        memcpy(buff, argv[1], 8);
+        buff[8] = '\0';
+        if(strcmp(buff, "https://") == 0) {
+            is_from_web = 1;
+            load_timeout = 30.0;
+        }
+    }
+    
+    if(!is_from_web) {
+        FILE* fp = fopen(argv[1], "r");
+        if(fp == NULL) {
+            printf("Media file %s does not exist.", argv[1]);
+            return 1;
+        }
+        fclose(fp);
+    }
+    
     const char *play_cmd[] = {"loadfile", argv[1], NULL};
     check_error(mpv_command(ctx, play_cmd));
     
     // Let it play, and wait until the user quits.
-    char play_indicator[128+5];
+    char play_indicator[128];
     #ifdef _WIN32
-    sprintf(play_indicator, "%s/play", exec_path);
+    snprintf(play_indicator, 128, "%s\\mpv-play", temp_path);
     #else
-    sprintf(play_indicator, "/tmp/mpv-play");
+    snprintf(play_indicator, 128, "/tmp/mpv-play");
     #endif
     FILE *fp = fopen(play_indicator, "w");
     fprintf(fp, "play");
     fclose(fp);
+    double t = 0;
+    int loaded = 0;
+    int paused = 0;
     while(1) {
-        mpv_event *event = mpv_wait_event(ctx, 0.1);
+        mpv_event* event = mpv_wait_event(ctx, 0.1);
+        t += 0.1;
+        if(event->event_id == MPV_EVENT_FILE_LOADED) {
+            printf("Playing %s\n", argv[1]);
+            loaded = 1;
+        }
+        if(event->event_id == MPV_EVENT_PAUSE) {
+            if(!paused)
+                printf("Paused\n");
+            paused = 1;
+        }
+        if(event->event_id == MPV_EVENT_UNPAUSE) {
+            if(paused)
+                printf("Resumed\n");
+            paused = 0;
+        }
         if(event->event_id == MPV_EVENT_SHUTDOWN)
             break;
+
+        if(loaded == 0 && t > load_timeout) {
+            printf("Error loading media %s\n", argv[1]);
+            break;
+        }
         
         int cmd = read_command();
         if(cmd == COMMAND_PAUSE) {
@@ -136,8 +168,9 @@ int main(int argc, char *argv[]) {
             check_error(mpv_command(ctx, cmd));
         }
         else if(cmd == COMMAND_MOVE) {
+            printf("Moved media by %d seconds\n", move_time);
             char buff[6];
-            sprintf(buff, "%d", move_time);
+            snprintf(buff, 6, "%d", move_time);
             const char *cmd[] = {"seek", buff, NULL};
             check_error(mpv_command(ctx, cmd));
         }
@@ -149,5 +182,6 @@ int main(int argc, char *argv[]) {
     
     remove(play_indicator);
     mpv_terminate_destroy(ctx);
+    printf("Exit\n");
     return 0;
 }

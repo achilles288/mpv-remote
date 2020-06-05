@@ -13,11 +13,21 @@
 #endif
 
 
+static char *temp_path;
 static char exec_path[128];
 
 static void get_exec_path(char* buff, size_t len) {
-    #ifdef _WIN32
-    
+#ifdef _WIN32
+    GetModuleFileName(NULL, buff, (DWORD)len);
+    char* q = NULL;
+    char* p = buff + 1;
+    while (*p != '\0') {
+        if (*p == '\\')
+            q = p;
+        p++;
+    }
+    if (q != NULL)
+        *q = '\0';
     #else
     if (readlink("/proc/self/exe", buff, len) != -1)
         dirname(buff);
@@ -27,11 +37,11 @@ static void get_exec_path(char* buff, size_t len) {
 }
 
 static void write_command(char* cmd) {
-    char cmd_file[128+8];
+    char cmd_file[128];
     #ifdef _WIN32
-    sprintf(cmd_file, "%s/command", exec_path);
+    snprintf(cmd_file, 128, "%s\\mpv-command", temp_path);
     #else
-    sprintf(cmd_file, "/tmp/mpv-command");
+    snprintf(cmd_file, 128, "/tmp/mpv-command");
     #endif
     FILE *fp = fopen(cmd_file, "w");
     fprintf(fp, "%s", cmd);
@@ -43,7 +53,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
+    temp_path = getenv("TEMP");
+    #ifndef _WIN32
     get_exec_path(exec_path, 128);
+    #endif
     
     if(strcmp(argv[1], "-p") == 0) {
         write_command("pause");
@@ -54,7 +67,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         char buff[12];
-        sprintf(buff, "move %s", argv[2]);
+        snprintf(buff, 12, "move %s", argv[2]);
         write_command(buff);
     }
     else if(strcmp(argv[1], "-k") == 0) {
@@ -62,11 +75,11 @@ int main(int argc, char *argv[]) {
     }
     else {
         FILE *fp;
-        char play_indicator[128+5];
+        char play_indicator[128];
         #ifdef _WIN32
-        sprintf(play_indicator, "%s/play", exec_path);
+        snprintf(play_indicator, 128, "%s\\mpv-play", temp_path);
         #else
-        sprintf(play_indicator, "/tmp/mpv-play");
+        snprintf(play_indicator, 128, "/tmp/mpv-play");
         #endif
         fp = fopen(play_indicator, "r");
         if(fp != NULL) {
@@ -85,15 +98,14 @@ int main(int argc, char *argv[]) {
                     break;
                 i++;
             }
-            
-            write_command("none");
         }
+        write_command("none");
         
         char sys_cmd[256];
         #ifdef _WIN32
-        sprintf(sys_cmd, "start %s/mpv-play %s", exec_path, argv[1]);
+        snprintf(sys_cmd, 256, "start mpv-play %s", argv[1]);
         #else
-        sprintf(sys_cmd, "%s/mpv-play %s &", exec_path, argv[1]);
+        snprintf(sys_cmd, 256, "%s/mpv-play %s &", exec_path, argv[1]);
         #endif
         system(sys_cmd);
     }
