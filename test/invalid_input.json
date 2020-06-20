@@ -1,0 +1,13 @@
+{
+  "name":"The Flash",
+  "url":"~/Downloads/The Flash Season 6/ep11.mp4"
+  "time":115.19,
+  "duration":1023.66,
+  "paused":false,
+  "loaded":false,
+  "running":true,
+  "error":
+    "code":1,
+    "message":"Error occured"
+  }
+}

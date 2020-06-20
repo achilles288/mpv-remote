@@ -1,0 +1,9 @@
+#ifndef __MPV_REMOTE_TEST_CONFIG_H__
+#define __MPV_REMOTE_TEST_CONFIG_H__
+
+/**
+ * @brief URL to test resource folder
+ */
+#define TEST_RESOURCE_PATH "${MPV_REMOTE_TEST_RESOURCE_PATH}"
+
+#endif

@@ -1,0 +1,9 @@
+#ifndef __MPV_REMOTE_CONFIG_H__
+#define __MPV_REMOTE_CONFIG_H__
+
+/**
+ * @brief Constant string representing MPV Remote version
+ */
+#define REMOTE_VERSION_STRING "${MPV_REMOTE_VERSION}"
+
+#endif
