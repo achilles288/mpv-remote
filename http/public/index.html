@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MPV Remote</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="external/rangeslider-js/styles.css">
+<link rel="stylesheet" href="styles.css">
+<script src="external/rangeslider-js/rangeslider-js.min.js"></script>
+<script src="loader.js"></script>
+<script src="controller.js"></script>
+</head>
+<body>
+
+<!-- Navigation bar -->
+<div id="navi-bar">
+  <ul id="navi-bar-menu">
+    <li id="menu-settings">
+      <a href="settings.html"><i class="fa fa-cog"></i> Settings</a>
+    </li>
+  </ul>
+</div>
+
+<!-- Home page main content -->
+<div id="home-heading">
+  <h1>
+    <img src="mpv-logo-128.png" alt="mpv logo">
+    <span>mpv-remote</span>
+  </h1>
+  <p>Load a media and play it on the server</p>
+  <div class="spacer">&nbsp;</div>
+  <div id="media-loader">
+    <ul id="media-loader-buttons">
+      <li>Browse</li>
+      <li>
+        <input type="file" accept="video/*" style="display: none"/>
+        <span>Upload</span>
+      </li>
+      <li>URL</li>
+    </ul>
+    <p id="media-loader-status" class="error"></p>
+  </div>
+  <div id="media-controller">
+    <div id="media-name" style="color: transparent">Untitled</div>
+    <ul id="media-controller-buttons">
+      <li class="disabled no-select" disabled><i class="fa fa-undo"></i></li>
+      <li class="disabled no-select" disabled><i class="fa fa-play"></i></li>
+      <li class="disabled no-select" disabled><i class="fa fa-undo"></i></li>
+    </ul>
+    <div id="media-controller-tools" style="display: none">
+      <table style="width: 100%;">
+        <tr>
+          <td>
+            <input id="time-control" type="range" min="1" max="1000" value="0">
+          </td>
+          <td style="width: 7.8em;">
+            <div id="time-label">0:00:00 / 0:00:00</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Sub content -->
+<div id="content">
+  <div>
+    <h2>Overview</h2>
+    <p>
+        Remote-controlled media player for a TV connected to a PC. There are
+        cases where a person plays a media downloaded in his laptop connecting 
+        the laptop to a TV via an HDMI cable. With this application, the user 
+        can manipulate the media playing by an additional device like 
+        smartphone from his chair through HTTP connection.
+    </p>
+  </div>
+</div>
+
+<!-- Footer -->
+%s
+
+<!-- File browser window -->
+<div class="modal">
+  <form id="media-loader-browser-win" method="post" action="command">
+    <button type="button" class="close">&times;</button>
+    <h2>Browse on server</h2>
+    <input type="submit">
+  </form>
+</div>
+
+<!-- URL window -->
+<div class="modal">
+  <form id="media-loader-url-win" method="post" action="command">
+    <button type="button" class="close">&times;</button>
+    <h2>Load from URL</h2>
+    <p class="error"></p>
+    <table>
+      <tr>
+        <td>URL</td>
+        <td>
+          <input type="text" id="media-loader-url-input" name="url" required>
+        </td>
+      </tr>
+    </table>
+    <input type="submit">
+  </form>
+</div>
+
+</body>
+</html>

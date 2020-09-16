@@ -1,0 +1,27 @@
+<footer>
+  <div id="footer-left">
+    Powered by Khant Kyaw Khaung
+  </div>
+  <div id="footer-right">
+    mpv-remote %s
+  </div>
+</footer>
+
+<!-- Authentication window -->
+<div class="modal">
+  <form id="auth-form" method="post" action="authenticate">
+    <h2>Authentication</h2>
+    <p class="error"></p>
+    <table>
+      <tr>
+        <td>Password</td>
+        <td>
+          <input type="password" name="password" required>
+        </td>
+      </tr>
+    </table>
+    <input type="submit">
+  </form>
+</div>
+
+<script src="auth.js"></script>
