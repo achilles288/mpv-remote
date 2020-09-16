@@ -98,19 +98,6 @@ void remote_player_event_process(mpv_handle *ctx, mpv_event *event) {
             remote_status_set_paused(0);
         }
     }
-    else if(event->event_id == MPV_EVENT_SEEK) {
-        double t2;
-        mpv_get_property(ctx, "time-pos", MPV_FORMAT_DOUBLE, &t2);
-        double moveTime = t2 - time;
-        if(moveTime < 0) {
-            remote_log_write("Rewinded the media by %d seconds\n",
-                             (int) (-moveTime+0.5));
-        }
-        else {
-            remote_log_write("Skipped the media by %d seconds\n",
-                             (int) (moveTime+0.5));
-        }
-    }
     else if(remote_status_get_loaded()) {
         mpv_get_property(ctx, "time-pos", MPV_FORMAT_DOUBLE, &time);
         remote_status_set_time(time);
@@ -122,21 +109,31 @@ void remote_player_event_process(mpv_handle *ctx, mpv_event *event) {
  * 
  * @param ctx MPV Player context
  * @param cmd Remote command ID
+ * @param options Command options
  */
-void remote_player_command_process(mpv_handle *ctx, int cmd) {
+void remote_player_command_process(mpv_handle *ctx, int cmd, void **options) {
+    if(!remote_status_get_loaded())
+        return;
+    
     if(cmd == REMOTE_COMMAND_PAUSE) {
-        if(!remote_status_get_loaded())
-            return;
-        int paused;
-        mpv_get_property(ctx, "pause", MPV_FORMAT_FLAG, &paused);
-        paused = !paused;
-        mpv_set_property(ctx, "pause", MPV_FORMAT_FLAG, &paused);
+        int *toPause = (int*) options[0];
+        if(*toPause == -1) {
+            int paused;
+            mpv_get_property(ctx, "pause", MPV_FORMAT_FLAG, &paused);
+            paused = !paused;
+            mpv_set_property(ctx, "pause", MPV_FORMAT_FLAG, &paused);
+        }
+        else {
+            mpv_set_property(ctx, "pause", MPV_FORMAT_FLAG, toPause);
+        }
     }
     else if(cmd == REMOTE_COMMAND_MOVE) {
-        if(!remote_status_get_loaded())
-            return;
-        double moveTime = remote_command_get_move_request();
-        double time = remote_status_get_time() + moveTime;
+        double *moveTime = (double*) options[0];
+        double time = remote_status_get_time() + *moveTime;
         mpv_set_property(ctx, "time-pos", MPV_FORMAT_DOUBLE, &time);
+    }
+    else if(cmd == REMOTE_COMMAND_SEEK) {
+        double *requestedTime = (double*) options[0];
+        mpv_set_property(ctx, "time-pos", MPV_FORMAT_DOUBLE, requestedTime);
     }
 }

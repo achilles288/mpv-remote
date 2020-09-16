@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project("MPV Remote")
-
-set(MPV_REMOTE_VERSION 1.1.0)
+project("MPV Remote" VERSION 1.1.0)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 11)
@@ -24,6 +22,8 @@ link_directories(${CMAKE_BINARY_DIR}/lib)
 if(UNIX)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED mpv)
+pkg_check_modules(MHD REQUIRED libmicrohttpd)
+pkg_check_modules(GCRY REQUIRED libgcrypt)
 pkg_check_modules(JSONC REQUIRED json-c)
 
 
@@ -37,6 +37,15 @@ file(COPY
 link_directories(${LIBMPV_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
 set(MPV_INCLUDE_DIRS ${LIBMPV_DIR}/include)
 set(MPV_LIBRARIES mpv)
+
+set(LIBMHD_DIR ${PROJECT_SOURCE_DIR}/external/libmicrohttpd)
+file(COPY
+    ${LIBMHD_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/libmicrohttpd-dll.dll
+    DESTINATION ${CMAKE_BINARY_DIR}/bin
+)
+link_directories(${LIBMHD_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
+set(MHD_INCLUDE_DIRS ${LIBMHD_DIR}/include)
+set(MHD_LIBRARIES libmicrohttpd-dll)
 
 add_subdirectory(external/json-c)
 set(JSONC_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/external/json-c)
@@ -52,6 +61,8 @@ configure_file(
 include_directories(
     ${CMAKE_BINARY_DIR}
     ${MPV_INCLUDE_DIRS}
+    ${MHD_INCLUDE_DIRS}
+    ${GCRY_INCLUDE_DIRS}
     ${JSONC_INCLUDE_DIRS}
 )
 
@@ -71,13 +82,12 @@ add_library(mpv-remote SHARED
     libremote/status.h
 )
 
-set_target_properties(mpv-remote PROPERTIES VERSION 1.1.0)
-set_target_properties(mpv-remote PROPERTIES SOVERSION 1)
-
-target_link_libraries(mpv-remote PUBLIC
-    ${JSONC_LIBRARIES}
-    ${MPV_LIBRARIES}
+set_target_properties(mpv-remote PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
 )
+
+target_link_libraries(mpv-remote PUBLIC ${JSONC_LIBRARIES})
 
 
 # 
@@ -99,6 +109,7 @@ target_link_libraries(remote PUBLIC mpv-remote)
 # 
 add_executable(player
     player/main.c
+    player/http.c
     player/player.c
     player/player.h
 )
@@ -107,52 +118,20 @@ set_target_properties(player
     PROPERTIES OUTPUT_NAME "mpv-play"
 )
 
-target_link_libraries(player PUBLIC mpv-remote)
-
-
-
-
-# 
-# Unit tests
-# 
-set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-set(gtest_force_shared_crt ON CACHE BOOL "compile gtest with MD" FORCE)
-add_subdirectory(external/googletest)
-
-set_target_properties(gtest
-    PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/$<0:>
-)
-set_target_properties(gtest_main
-    PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/$<0:>
-)
-set_target_properties(gtest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<0:>
-)
-set_target_properties(gtest_main
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<0:>
-)
-
-set(MPV_REMOTE_TEST_RESOURCE_PATH ${PROJECT_SOURCE_DIR}/test)
-
-configure_file(
-    ${PROJECT_SOURCE_DIR}/test/config.h.in
-    ${PROJECT_SOURCE_DIR}/test/test-config.h
-)
-
-add_executable(remote-test
-    player/player.c
-    test/command.cpp
-    test/logger.cpp
-    test/player.cpp
-    test/status.cpp
-)
-
-target_include_directories(remote-test
-    PRIVATE external/googletest/googletest/include
-)
-
-target_link_libraries(remote-test PUBLIC
-    gtest
-    gtest_main
+target_link_libraries(player PUBLIC
     mpv-remote
+    ${MPV_LIBRARIES}
+    ${MHD_LIBRARIES}
+    ${GCRY_LIBRARIES}
+)
+
+
+
+
+# 
+# Copy the data files
+# 
+file(COPY
+    http
+    DESTINATION ${CMAKE_BINARY_DIR}/bin
 )

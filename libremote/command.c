@@ -34,8 +34,50 @@
 #define MESSAGE_MAX REMOTE_MESSAGE_MAX
 
 
+static int command_tokenize(char *line, char *tokens[], int max) {
+    for(int i=0; i<max; i++)
+        tokens[i] = NULL;
+    
+    char *tok = strtok(line, " ");
+    int i = 0;
+    int quote = 0;
+    while(tok != NULL && i < max) {
+        if(!quote) {
+            if(tok[0] == '"') {
+                quote = 1;
+                tokens[i] = tok + 1;
+                size_t len = strlen(tok);
+                if(tok[len-1] == '"') {
+                    quote = 0;
+                    tok[len-1] = '\0';
+                    i++;
+                }
+            }
+            else {
+                tokens[i] = tok;
+                i++;
+            }
+        }
+        else {
+            *(tok-1) = ' ';
+            size_t len = strlen(tok);
+            if(tok[len-1] == '"') {
+                quote = 0;
+                tok[len-1] = '\0';
+                i++;
+            }
+        }
+        tok = strtok(NULL, " ");
+    }
+    
+    return i;
+}
+
+
+static void *options[4];
+static int int1;
 static char urlRequest[PATH_MAX];
-static double moveRequest = 0.0;
+static double timeRequest = 0.0;
 
 
 /**
@@ -94,24 +136,50 @@ REMOTE_EXPORT int remote_command_read() {
     remove(cmdFile);
     
     // Tokenizes the command line
-    char *tokens[3];
-    int tokenCount = _remote_command_tokenize(cmd, tokens, 3);
+    char *tokens[4];
+    int tokenCount = command_tokenize(cmd, tokens, 4);
+    options[0] = NULL;
     
     // Sees the command checking the first token
     if(strcmp(tokens[0], "open") == 0) {
         if(tokenCount < 2)
             return REMOTE_COMMAND_NONE;
         strcpy(urlRequest, tokens[1]);
+        if(tokenCount == 3) {
+            if(strcmp(tokens[2], "--pause") == 0)
+                int1 = 1;
+        }
+        else {
+            int1 = 0;
+        }
+        options[0] = (void*) urlRequest;
+        options[1] = (void*) &int1;
+        options[2] = NULL;
         return REMOTE_COMMAND_OPEN;
     }
     else if(strcmp(tokens[0], "pause") == 0) {
+        int1 = -1;
+        if(tokenCount == 2) {
+            if(strcmp(tokens[1], "0") == 0)
+                int1 = 0;
+            else if(strcmp(tokens[1], "1") == 0)
+                int1 = 1;
+        }
+        options[0] = (void*) &int1;
+        options[1] = NULL;
         return REMOTE_COMMAND_PAUSE;
     }
-    else if(strcmp(tokens[0], "move") == 0) {
+    else if(strcmp(tokens[0], "move") == 0 || strcmp(tokens[0], "seek") == 0)
+    {
         if(tokenCount < 2)
             return REMOTE_COMMAND_NONE;
-        sscanf(tokens[1], "%lf", &moveRequest);
-        return REMOTE_COMMAND_MOVE;
+        sscanf(tokens[1], "%lf", &timeRequest);
+        options[0] = (void*) &timeRequest;
+        options[1] = NULL;
+        if(strcmp(tokens[0], "move") == 0)
+            return REMOTE_COMMAND_MOVE;
+        else
+            return REMOTE_COMMAND_SEEK;
     }
     else if(strcmp(tokens[0], "stop") == 0) {
         return REMOTE_COMMAND_STOP;
@@ -125,73 +193,11 @@ REMOTE_EXPORT int remote_command_read() {
 }
 
 /**
- * @brief Tokenizes the command line
+ * @brief Gets the command options
  * 
- * @param line Command line
- * @param tokens Pointer of token array to assign
- * @param max Size of token array. Maximum count plus one.
+ * The command options can be retrived after calling the remote_command_read()
+ * function.
  * 
- * @return Number of tokens read
+ * @return Array of pointers to options
  */
-REMOTE_EXPORT int _remote_command_tokenize(char *line, char *tokens[],
-                                           int max)
-{
-    for(int i=0; i<max; i++)
-        tokens[i] = NULL;
-    
-    char *tok = strtok(line, " ");
-    int i = 0;
-    int quote = 0;
-    while(tok != NULL && i < max) {
-        if(!quote) {
-            if(tok[0] == '"') {
-                quote = 1;
-                tokens[i] = tok + 1;
-                size_t len = strlen(tok);
-                if(tok[len-1] == '"') {
-                    quote = 0;
-                    tok[len-1] = '\0';
-                    i++;
-                }
-            }
-            else {
-                tokens[i] = tok;
-                i++;
-            }
-        }
-        else {
-            *(tok-1) = ' ';
-            size_t len = strlen(tok);
-            if(tok[len-1] == '"') {
-                quote = 0;
-                tok[len-1] = '\0';
-                i++;
-            }
-        }
-        tok = strtok(NULL, " ");
-    }
-    
-    return i;
-}
-
-/**
- * @brief Gets the amount of time to rewind or skip
- * 
- * The time value stored is updated when the remote_command_read() function
- * is called and returns REMOTE_COMMAND_MOVE.
- * 
- * @return Time in seconds
- */
-REMOTE_EXPORT double remote_command_get_move_request() { return moveRequest; }
-
-/**
- * @brief Gets the requested media URL
- * 
- * The string is updated by the remote_command_read() function with
- * REMOTE_COMMAND_OPEN macro returned.
- * 
- * @return URL string
- */
-REMOTE_EXPORT const char* remote_command_get_url_request() {
-    return urlRequest;
-}
+REMOTE_EXPORT void** remote_command_get_options() { return options; }

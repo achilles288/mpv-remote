@@ -4,6 +4,6 @@
 /**
  * @brief Constant string representing MPV Remote version
  */
-#define REMOTE_VERSION_STRING "${MPV_REMOTE_VERSION}"
+#define REMOTE_VERSION_STRING "${PROJECT_VERSION}"
 
 #endif

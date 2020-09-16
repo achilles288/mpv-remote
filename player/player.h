@@ -15,8 +15,6 @@
 #ifndef __MPV_REMOTE_PLAYER_H__
 #define __MPV_REMOTE_PLAYER_H__ ///< Header guard
 
-#include "../libremote/config.h"
-
 #include <mpv/client.h>
 
 #ifdef __cplusplus
@@ -48,8 +46,9 @@ void remote_player_event_process(mpv_handle *ctx, mpv_event *event);
  * 
  * @param ctx MPV Player context
  * @param cmd Remote command ID
+ * @param options Command options
  */
-void remote_player_command_process(mpv_handle *ctx, int cmd);
+void remote_player_command_process(mpv_handle *ctx, int cmd, void **options);
 
 #ifdef __cplusplus
 }

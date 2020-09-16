@@ -31,8 +31,9 @@ extern "C" {
 #define REMOTE_COMMAND_OPEN  1 ///< Opens the media
 #define REMOTE_COMMAND_PAUSE 2 ///< Pauses command
 #define REMOTE_COMMAND_MOVE  3 ///< Rewinds or skips the media by some time
-#define REMOTE_COMMAND_STOP  4 ///< Stops the media
-#define REMOTE_COMMAND_KILL  5 ///< Kills the media player
+#define REMOTE_COMMAND_SEEK  4 ///< Seeks the media at a specific time
+#define REMOTE_COMMAND_STOP  5 ///< Stops the media
+#define REMOTE_COMMAND_KILL  6 ///< Kills the media player
 
 #ifndef REMOTE_MESSAGE_MAX
 #define REMOTE_MESSAGE_MAX 1024 ///< Maximum size of a log message
@@ -64,36 +65,11 @@ REMOTE_EXPORT void remote_command_write(const char *fmt, ...);
 REMOTE_EXPORT int remote_command_read();
 
 /**
- * @brief Tokenizes the command line
+ * @brief Gets the command options
  * 
- * @param line Command line
- * @param tokens Pointer of token array to assign
- * @param max Size of token array. Maximum count plus one.
- * 
- * @return Number of tokens read
+ * @return Array of pointers to options
  */
-REMOTE_EXPORT int _remote_command_tokenize(char *line, char *tokens[],
-                                           int max);
-
-/**
- * @brief Gets the amount of time to rewind or skip
- * 
- * The time value stored is updated when the remote_command_read() function
- * is called and returns REMOTE_COMMAND_MOVE.
- * 
- * @return Time in seconds
- */
-REMOTE_EXPORT double remote_command_get_move_request();
-
-/**
- * @brief Gets the requested media URL
- * 
- * The string is updated by the remote_command_read() function with
- * REMOTE_COMMAND_OPEN macro returned.
- * 
- * @return URL string
- */
-REMOTE_EXPORT const char* remote_command_get_url_request();
+REMOTE_EXPORT void** remote_command_get_options();
 
 #ifdef __cplusplus
 }

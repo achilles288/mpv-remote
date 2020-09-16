@@ -54,6 +54,11 @@ REMOTE_EXPORT void remote_log_write(const char *msg, ...);
 REMOTE_EXPORT const char *remote_log_read();
 
 /**
+ * @brief Sets the current log position to the end of the file
+ */
+REMOTE_EXPORT void remote_log_seek_end();
+
+/**
  * @brief Clears the logfile
  */
 REMOTE_EXPORT void remote_log_clear();

@@ -41,7 +41,7 @@
 
 
 static char logMessage[MESSAGE_MAX];
-static long logFilePos = 0;
+static long logFilePos = 0L;
 
 
 /**
@@ -114,6 +114,28 @@ REMOTE_EXPORT const char *remote_log_read() {
 }
 
 /**
+ * @brief Sets the current log position to the end of the file
+ */
+REMOTE_EXPORT void remote_log_seek_end() {
+    #ifdef _WIN32
+    char logFile[PATH_MAX];
+    snprintf(logFile, PATH_MAX, "%s\\mpv-log", getenv("TEMP"));
+    #else
+    const char *logFile = "/tmp/mpv-log";
+    #endif
+    
+    FILE *fp = fopen(logFile, "r");
+    if(fp == NULL) {
+        logFilePos = 0L;
+        return;
+    }
+    
+    fseek(fp, 0L, SEEK_END);
+    logFilePos = ftell(fp);
+    fclose(fp);
+}
+
+/**
  * @brief Clears the logfile
  */
 REMOTE_EXPORT void remote_log_clear() {
@@ -149,14 +171,10 @@ REMOTE_EXPORT int remote_log_wait_response(double timeout) {
         if(log != NULL) {
             sleep(10);
             printf("%s", log);
-            remote_status_pull();
-            char buff[REMOTE_MESSAGE_MAX];
-            status = remote_status_get_error(buff);
             responded = 1;
-            k = i + 10;
+            k = i + 4;
         }
     }
-    remote_log_clear();
     
     if(!responded) {
         printf("Media player is not responding\n");

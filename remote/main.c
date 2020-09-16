@@ -75,7 +75,6 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     
-    remote_log_clear();
     remote_status_pull();
     if(remote_status_get_running() == 0) {
         printf("The media player is not running\n"
@@ -83,6 +82,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
+    remote_log_seek_end();
     double timeout = 1.0;
     
     /**
@@ -104,7 +104,17 @@ int main(int argc, char *argv[]) {
             printf("A media is not being played\n");
             return 1;
         }
-        remote_command_write("move %s", argv[2]);
+        
+        // Prints the amount of time moved
+        double time;
+        sscanf(argv[2], "%lf", &time);
+        if(time < 0)
+            printf("Rewinded the media by %d seconds\n", (int) (-time+0.5));
+        else
+            printf("Skipped the media by %d seconds\n", (int) (time+0.5));
+        
+        remote_command_write("move %lf", time);
+        return 0;
     }
     else if(strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--stop") == 0) {
         if(!remote_status_get_loaded()) {
