@@ -20,10 +20,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <Winsock2.h>
+#define PATH_MAX _MAX_PATH
+#else
 #include <netinet/in.h>
+#include <gcrypt.h>
+#endif
 
 #include <microhttpd.h>
-#include <gcrypt.h>
 
 #define PORT 8888
 #define PREFIX "http/public"
@@ -70,22 +75,65 @@ struct RemoteConnection {
 static uint32_t admin_addr = 0;
 
 
-static int authenticate(const char *pswd) {
+#ifdef _WIN32
+static int authenticate_wincrypt(const char* pswd) {
+    unsigned int dlen = 256 / 8;
+    HCRYPTPROV hProv = 0;
+    HCRYPTHASH hHash = 0;
+
+    CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
+    CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash);
+
+    size_t len = 0;
+    unsigned char* registered = load_file("http/password", "rb", &len);
+
+    // If the hash does not exist or the hash is invalid
+    if(registered == NULL || len != 32) {
+        if(registered != NULL)
+            free(registered);
+        // Rewrites a hash from a default password
+        FILE* fp = fopen("http/password", "wb");
+        registered = malloc(dlen);
+        CryptHashData(hHash, "password", 8, 0);
+        CryptGetHashParam(hHash, HP_HASHVAL, registered, dlen, 0);
+        for(size_t i=0; i<dlen; i++)
+            fputc(registered[i], fp);
+        fclose(fp);
+    }
+
+    // Hashes the input password and compares with the registered one
+    unsigned char* x = malloc(dlen);
+    CryptHashData(hHash, pswd, strlen(pswd), 0);
+    CryptGetHashParam(hHash, HP_HASHVAL, x, dlen, 0);
+    int auth = 1;
+    for(size_t i=0; i<dlen; i++) {
+        if(x[i] != registered[i]) {
+            auth = 0;
+            break;
+        }
+    }
+
+    CryptDestroyHash(hHash);
+    CryptReleaseContext(hProv, 0);
+    return auth;
+}
+#else
+static int authenticate_gcrypt(const char* pswd) {
     unsigned int dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
     gcry_md_hd_t h;
     gcry_md_open(&h, GCRY_MD_SHA256, GCRY_MD_FLAG_SECURE);
-    
+
     size_t len = 0;
-    unsigned char *registered = load_file("http/password", "rb", &len);
-    
+    unsigned char* registered = load_file("http/password", "rb", &len);
+
     // If the hash does not exist or the hash is invalid
     if(registered == NULL || len != dlen) {
         if(registered != NULL)
             free(registered);
         // Rewrites a hash from a default password
-        FILE *fp = fopen("http/password", "wb");
+        FILE* fp = fopen("http/password", "wb");
         gcry_md_write(h, "password", 8);
-        unsigned char *x = gcry_md_read(h, GCRY_MD_SHA256);
+        unsigned char* x = gcry_md_read(h, GCRY_MD_SHA256);
         registered = malloc(dlen);
         memcpy(registered, x, dlen);
         for(size_t i=0; i<dlen; i++)
@@ -93,18 +141,29 @@ static int authenticate(const char *pswd) {
         fclose(fp);
         gcry_md_reset(h);
     }
-    
+
     // Hashes the input password and compares with the registered one
     gcry_md_write(h, pswd, strlen(pswd));
-    unsigned char *x = gcry_md_read(h, GCRY_MD_SHA256);
+    unsigned char* x = gcry_md_read(h, GCRY_MD_SHA256);
     int auth = 1;
     for(size_t i=0; i<dlen; i++) {
-        if(x[i] != registered[i])
+        if(x[i] != registered[i]) {
             auth = 0;
+            break;
+        }
     }
-    
+
     gcry_md_close(h);
     return auth;
+}
+#endif
+
+static int authenticate(const char *pswd) {
+    #ifdef _WIN32
+    return authenticate_wincrypt(pswd);
+    #else
+    return authenticate_gcrypt(pswd);
+    #endif
 }
 
 
