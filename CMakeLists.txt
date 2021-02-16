@@ -28,6 +28,15 @@ pkg_check_modules(JSONC REQUIRED json-c)
 
 
 else()
+set(JSONC_DIR ${PROJECT_SOURCE_DIR}/external/json-c)
+file(COPY
+    ${JSONC_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/json-c.dll
+    DESTINATION ${CMAKE_BINARY_DIR}/bin
+)
+link_directories(${JSONC_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
+set(JSONC_INCLUDE_DIRS ${LIBJSONC_DIR}/include)
+set(JSONC_LIBRARIES json-c)
+
 set(LIBMPV_DIR ${PROJECT_SOURCE_DIR}/external/libmpv)
 file(COPY
     ${LIBMPV_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/mpv-1.dll
@@ -46,10 +55,6 @@ file(COPY
 link_directories(${LIBMHD_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
 set(MHD_INCLUDE_DIRS ${LIBMHD_DIR}/include)
 set(MHD_LIBRARIES libmicrohttpd-dll)
-
-add_subdirectory(external/json-c)
-set(JSONC_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/external/json-c)
-set(JSONC_LIBRARIES json-c)
 endif()
 
 
