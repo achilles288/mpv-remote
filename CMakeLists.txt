@@ -34,7 +34,7 @@ file(COPY
     DESTINATION ${CMAKE_BINARY_DIR}/bin
 )
 link_directories(${JSONC_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
-set(JSONC_INCLUDE_DIRS ${LIBJSONC_DIR}/include)
+set(JSONC_INCLUDE_DIRS ${JSONC_DIR}/include)
 set(JSONC_LIBRARIES json-c)
 
 set(LIBMPV_DIR ${PROJECT_SOURCE_DIR}/external/libmpv)
