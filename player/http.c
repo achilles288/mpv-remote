@@ -46,14 +46,23 @@ static char *load_file(const char *file, const char *mode, size_t *len) {
     size_t file_size = ftell(fp);
     fseek(fp, 0L, SEEK_SET);
     char *buffer = malloc(file_size+1);
-    for(size_t i=0; i<file_size; i++)
-        buffer[i] = getc(fp);
-    buffer[file_size] = '\0';
+    size_t i = 0;
+
+    if(strncmp(mode, "r", 2) == 0) {
+        char c;
+        while((c = getc(fp)) != EOF)
+            buffer[i++] = c;
+    }
+    else {
+        while(i < file_size)
+            buffer[i++] = getc(fp);
+    }
+    buffer[i] = '\0';
     fclose(fp);
     
     if(len != NULL)
-        *len = file_size;
-    
+        *len = i;
+
     return buffer;
 }
 
@@ -77,36 +86,38 @@ static uint32_t admin_addr = 0;
 
 #ifdef _WIN32
 static int authenticate_wincrypt(const char* pswd) {
-    unsigned int dlen = 256 / 8;
+    const DWORD dlen = 20;
     HCRYPTPROV hProv = 0;
     HCRYPTHASH hHash = 0;
 
-    CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
-    CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash);
+    CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
+    CryptCreateHash(hProv, CALG_SHA1, 0, 0, &hHash);
 
-    size_t len = 0;
-    unsigned char* registered = load_file("http/password", "rb", &len);
+    size_t file_length = 0;
+    unsigned char* registered = load_file("http/password", "rb", &file_length);
 
     // If the hash does not exist or the hash is invalid
-    if(registered == NULL || len != 32) {
+    if(registered == NULL || file_length != dlen) {
         if(registered != NULL)
             free(registered);
         // Rewrites a hash from a default password
         FILE* fp = fopen("http/password", "wb");
+        DWORD len = dlen;
         registered = malloc(dlen);
         CryptHashData(hHash, "password", 8, 0);
-        CryptGetHashParam(hHash, HP_HASHVAL, registered, dlen, 0);
-        for(size_t i=0; i<dlen; i++)
+        CryptGetHashParam(hHash, HP_HASHVAL, registered, &len, 0);
+        for(DWORD i=0; i<dlen; i++)
             fputc(registered[i], fp);
         fclose(fp);
     }
 
     // Hashes the input password and compares with the registered one
+    DWORD len = dlen;
     unsigned char* x = malloc(dlen);
     CryptHashData(hHash, pswd, strlen(pswd), 0);
-    CryptGetHashParam(hHash, HP_HASHVAL, x, dlen, 0);
+    CryptGetHashParam(hHash, HP_HASHVAL, x, &len, 0);
     int auth = 1;
-    for(size_t i=0; i<dlen; i++) {
+    for(DWORD i=0; i<dlen; i++) {
         if(x[i] != registered[i]) {
             auth = 0;
             break;
