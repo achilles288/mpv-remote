@@ -73,11 +73,19 @@ struct RemoteConnection {
     uint32_t address;
     int method;
     char url[128];
-    const char *content_type;
+    char content_type[24];
     int status;
     char *reply;
     size_t reply_length;
     struct MHD_PostProcessor *postprocessor;
+};
+
+
+struct MimeType {
+    char ext[6];
+    char alt[16];
+    char mediatype[12];
+    int binary;
 };
 
 
@@ -193,7 +201,7 @@ static void error_answer(struct RemoteConnection *con_info, int error_code) {
         "</html>";
     
     // Constructs an error message
-    con_info->content_type = "text/html";
+    strncpy(con_info->content_type, "text/html", 24);
     con_info->status = error_code;
     con_info->reply = malloc(512);
     size_t len;
@@ -251,36 +259,40 @@ static void answer_to_get(
         return;
     
     char file_path[128];
-    snprintf(file_path, 128, PREFIX "/%s", url);
-    char *ext = strrchr(url, '.');
+    snprintf(file_path, 128, PREFIX "%s", url);
+    char *ext = strrchr(url, '.') + 1;
     if(ext == NULL) {
         error_answer(con_info, MHD_HTTP_UNSUPPORTED_MEDIA_TYPE);
         return;
     }
-    int binary = 0;
     
     // Checks the extensions to determine the mimetype
-    if(strcmp(ext, ".html") == 0) {
-        con_info->content_type = "text/html";
-        binary = 0;
+    struct MimeType mimetypes[] = {
+        {"html", "html", "text", 0},
+        {"css", "css", "text", 0},
+        {"js", "javascript", "text", 0},
+        {"png", "png", "image", 1},
+        {"ico", "icon", "image", 1},
+        {"svg", "svg", "image", 0},
+        {"ttf", "ttf", "font", 1},
+        {"woff", "woff", "font", 1},
+        {"woff2", "woff2", "font", 1},
+    };
+    int binary = 0;
+    int isSupported = 0;
+
+    for(int i=0; i<9; i++) {
+        if(strcmp(ext, mimetypes[i].ext) == 0) {
+            char *alt = mimetypes[i].alt;
+            char *mediatype = mimetypes[i].mediatype;
+            snprintf(con_info->content_type, 24, "%s/%s", mediatype, alt);
+            binary = mimetypes[i].binary;
+            isSupported = 1;
+            break;
+        }
     }
-    else if(strcmp(ext, ".css") == 0) {
-        con_info->content_type = "text/css";
-        binary = 0;
-    }
-    else if(strcmp(ext, ".js") == 0) {
-        con_info->content_type = "text/javascript";
-        binary = 0;
-    }
-    else if(strcmp(ext, ".png") == 0) {
-        con_info->content_type = "image/png";
-        binary = 1;
-    }
-    else if(strcmp(ext, ".ico") == 0) {
-        con_info->content_type = "image/icon";
-        binary = 1;
-    }
-    else {
+
+    if(!isSupported) {
         error_answer(con_info, MHD_HTTP_UNSUPPORTED_MEDIA_TYPE);
         return;
     }
@@ -308,7 +320,7 @@ static void answer_to_get_special(
     if(strcmp(url, "/") == 0)
         url = "/index.html";
     char file_path[128];
-    snprintf(file_path, 128, PREFIX "/%s", url);
+    snprintf(file_path, 128, PREFIX "%s", url);
     
     // Prepares the page footer
     static char footer_content[4096];
@@ -335,7 +347,7 @@ static void answer_to_get_special(
     }
     
     struct RemoteConnection *con_info = *con_cls;
-    con_info->content_type = "text/html";
+    strncpy(con_info->content_type, "text/html", 24);
     
     // Serves the special URLs
     if(strcmp(url, "/index.html") == 0 || strcmp(url, "/settings.html") == 0)
@@ -354,12 +366,12 @@ static void answer_to_get_special(
         free(buffer);
     }
     else if(strcmp(url, "/is-authenticated") == 0) {
-        con_info->content_type = NULL;
+        strncpy(con_info->content_type, "", 24);
         int auth = (con_info->address == admin_addr);
         con_info->status = auth ? MHD_HTTP_OK : MHD_HTTP_UNAUTHORIZED;
     }
     else if(strcmp(url, "/status") == 0) {
-        con_info->content_type = "application/json";
+        strncpy(con_info->content_type, "application/json", 24);
         #ifdef _WIN32
         char jsonFile[PATH_MAX];
         snprintf(jsonFile, PATH_MAX, "%s\\mpv-status.json", getenv("TEMP"));
@@ -462,7 +474,7 @@ static int iterate_post(
     }
     else if(strcmp(con_info->url, "/upload") == 0) {
         if(strcmp(key, "blob") == 0) {
-            return MHD_NO;
+            
         }
     }
     
@@ -511,7 +523,7 @@ static int answer_to_connection(
         con_info->address = sa->sin_addr.s_addr;
         con_info->method = met;
         strncpy(con_info->url, url, 128);
-        con_info->content_type = NULL;
+        strncpy(con_info->content_type, "", 24);
         con_info->status = 0;
         con_info->reply = NULL;
         con_info->reply_length = 0;
@@ -544,7 +556,7 @@ static int answer_to_connection(
         response = MHD_create_response_from_buffer(con_info->reply_length,
                                                    con_info->reply,
                                                    MHD_RESPMEM_PERSISTENT);
-        if(con_info->content_type) {
+        if(strlen(con_info->content_type)) {
             MHD_add_response_header(response, "Content-Type",
                                     con_info->content_type);
         }
