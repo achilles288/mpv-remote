@@ -32,6 +32,7 @@
 
 #define PORT 8888
 #define PREFIX "http/public"
+#define POST_BUFFER_SIZE 8192
 
 #define GET_METHOD 1
 #define POST_METHOD 2
@@ -77,6 +78,7 @@ struct RemoteConnection {
     int status;
     char *reply;
     size_t reply_length;
+    FILE* fp;
     struct MHD_PostProcessor *postprocessor;
 };
 
@@ -201,7 +203,7 @@ static void error_answer(struct RemoteConnection *con_info, int error_code) {
         "</html>";
     
     // Constructs an error message
-    strncpy(con_info->content_type, "text/html", 24);
+    strcpy(con_info->content_type, "text/html");
     con_info->status = error_code;
     con_info->reply = malloc(512);
     size_t len;
@@ -232,7 +234,6 @@ static void error_answer(struct RemoteConnection *con_info, int error_code) {
  * GET request handling
  * 
  */
-
 static void answer_to_get_special(
     struct MHD_Connection *connection,
     const char *url,
@@ -347,7 +348,7 @@ static void answer_to_get_special(
     }
     
     struct RemoteConnection *con_info = *con_cls;
-    strncpy(con_info->content_type, "text/html", 24);
+    strcpy(con_info->content_type, "text/html");
     
     // Serves the special URLs
     if(strcmp(url, "/index.html") == 0 || strcmp(url, "/settings.html") == 0)
@@ -371,7 +372,7 @@ static void answer_to_get_special(
         con_info->status = auth ? MHD_HTTP_OK : MHD_HTTP_UNAUTHORIZED;
     }
     else if(strcmp(url, "/status") == 0) {
-        strncpy(con_info->content_type, "application/json", 24);
+        strcpy(con_info->content_type, "application/json");
         #ifdef _WIN32
         char jsonFile[PATH_MAX];
         snprintf(jsonFile, PATH_MAX, "%s\\mpv-status.json", getenv("TEMP"));
@@ -391,7 +392,7 @@ static void answer_to_get_special(
             con_info->status = MHD_HTTP_OK;
         }
         else
-            con_info->status = MHD_HTTP_UNAUTHORIZED;
+            error_answer(con_info, MHD_HTTP_UNAUTHORIZED);
     }
 }
 
@@ -421,7 +422,7 @@ static int answer_to_post(
     
     if(*upload_data_size != 0) {
         MHD_post_process(con_info->postprocessor, upload_data,	
-	                 *upload_data_size);
+	                     *upload_data_size);
         *upload_data_size = 0;
         return MHD_YES;
     }
@@ -442,12 +443,14 @@ static int iterate_post(
     size_t size
 )
 {
+    struct RemoteConnection* con_info = coninfo_cls;
+
     // Limit data size for non-blob
-    if(strcmp(key, "blob") != 0 && size > 128)
+    if(strcmp(key, "blob") != 0 && size > 128) {
+        con_info->status = MHD_HTTP_URI_TOO_LONG;
         return MHD_YES;
-    
-    struct RemoteConnection *con_info = coninfo_cls;
-    
+    }
+
     // POST requests that do not require authentication
     if(strcmp(con_info->url, "/authenticate") == 0) {
         if(strcmp(key, "password") == 0) {
@@ -474,7 +477,65 @@ static int iterate_post(
     }
     else if(strcmp(con_info->url, "/upload") == 0) {
         if(strcmp(key, "blob") == 0) {
-            
+            if(con_info->fp == NULL) {
+                if(filename == NULL) {
+                    con_info->status = MHD_HTTP_BAD_REQUEST;
+                    return MHD_YES;
+                }
+                #ifdef _WIN32
+                CreateDirectory("upload", NULL);
+                #else
+                mkdir("upload", 0700);
+                #endif
+
+                // Extract name, extension and file type from full name
+                char name[64], ext[6], type[12];
+                strcpy(ext, "");
+                strcpy(type, "");
+                char* ptr;
+                ptr = strrchr(filename, '.');
+                if(ptr != NULL) {
+                    strncpy(ext, ptr, 6);
+                    memcpy(name, filename, ptr-filename);
+                    name[ptr-filename] = '\0';
+                }
+                else
+                    strncpy(name, filename, 64);
+                ptr = strrchr(content_type, '/');
+                if(ptr != NULL) {
+                    memcpy(type, content_type, ptr-content_type);
+                    type[ptr-content_type] = '\0';
+                }
+
+                // Checks if the media type is a video
+                if(strcmp(type, "video") != 0) {
+                    con_info->status = MHD_HTTP_UNSUPPORTED_MEDIA_TYPE;
+                    return MHD_YES;
+                }
+
+                char newfile[96];
+                char *json = malloc(96);
+                snprintf(newfile, 96, "upload/%s", filename);
+                snprintf(json, 96, "{\"url\":\"%s\"}", newfile);
+                con_info->reply = json;
+                con_info->reply_length = strnlen(json, 96);
+                strcpy(con_info->content_type, "application/json");
+                FILE *fp = fopen(newfile, "rb");
+
+                if(fp != NULL) {
+                    fclose(fp);
+                    return MHD_YES;
+                }
+                else
+                    con_info->fp = fopen(newfile, "wb");
+            }
+
+            // Writes to the new file
+            if(size > 0) {
+                if(!fwrite(data, size, 1, con_info->fp))
+                    return MHD_NO;
+            }
+            return MHD_YES;
         }
     }
     
@@ -527,10 +588,11 @@ static int answer_to_connection(
         con_info->status = 0;
         con_info->reply = NULL;
         con_info->reply_length = 0;
+        con_info->fp = NULL;
         
         if(met == POST_METHOD) {
             con_info->postprocessor
-                = MHD_create_post_processor(connection, 512, 
+                = MHD_create_post_processor(connection, POST_BUFFER_SIZE, 
                                             iterate_post, (void*) con_info);
         }
         
@@ -570,7 +632,7 @@ static int answer_to_connection(
 
 
 void request_completed(void *cls, struct MHD_Connection *connection, 
-     		       void **con_cls, enum MHD_RequestTerminationCode toe)
+     		           void **con_cls, enum MHD_RequestTerminationCode toe)
 {
     struct RemoteConnection *con_info = *con_cls;
     
@@ -580,8 +642,11 @@ void request_completed(void *cls, struct MHD_Connection *connection,
     if(con_info->method == POST_METHOD)
         MHD_destroy_post_processor(con_info->postprocessor);        
     
-    if(con_info->reply)
+    if(con_info->reply != NULL)
         free(con_info->reply);
+
+    if(con_info->fp != NULL)
+        fclose(con_info->fp);
     
     free(con_info);
     *con_cls = NULL;   
@@ -605,11 +670,10 @@ int remote_http_start_daemon() {
     remote_http_stop_daemon();
     
     http_daemon = MHD_start_daemon(
-        MHD_USE_INTERNAL_POLLING_THREAD,
-        PORT,
-        NULL, NULL,
+        MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
         &answer_to_connection, NULL,
-        MHD_OPTION_END
+        MHD_OPTION_NOTIFY_COMPLETED, &request_completed,
+        NULL, MHD_OPTION_END
     );
     
     if(http_daemon == NULL)
