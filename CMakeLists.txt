@@ -114,7 +114,13 @@ target_link_libraries(remote PUBLIC mpv-remote)
 # 
 add_executable(player
     player/main.c
-    player/http.c
+    player/http/auth.c
+    player/http/auth.h
+    player/http/con_type.h
+    player/http/get.c
+    player/http/http.c
+    player/http/http.h
+    player/http/post.c
     player/player.c
     player/player.h
 )
