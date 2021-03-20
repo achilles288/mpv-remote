@@ -131,8 +131,6 @@ function browserBrowse(path) {
         img = document.createElement("img");
         label = document.createElement("p");
         label.innerHTML = name;
-        elem.appendChild(img);
-        elem.appendChild(label);
         if(type == "directory") {
           img.src = "images/folder.png";
           elem.onclick = function(event) { browserSelectDirectory(this); };
@@ -140,18 +138,20 @@ function browserBrowse(path) {
         }
         else {
           if(type == "video") {
-            img.src = "thumbnail?file=" + browserDirectory + "/" + name;
-            img.classList.add("thumbnail");
-            img.onerror = function(event) {
-              this.src = "images/file-video.png";
-              this.classList.remove("thumbnail");
-            };
+            img.src = "images/file-video.png";
+            let thumb = document.createElement("img");
+            thumb.src = "thumbnail?file=" + browserDirectory + "/" + name;
+            thumb.classList.add("thumbnail");
+            thumb.onload = ((event) => event.target.nextSibling.remove());
+            elem.appendChild(thumb);
           }
           else if(type == "audio")
             img.src = "images/file-audio.png";
           elem.onclick = function(event) { browserSelectItem(this); };
           elem.ondblclick = ((event) => browserSubmit());
         }
+        elem.appendChild(img);
+        elem.appendChild(label);
         browserPanel.appendChild(elem);
       }
     })
