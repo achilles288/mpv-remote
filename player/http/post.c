@@ -159,10 +159,10 @@ int remote_http_iterate_post(
 
                 char newfile[PATH_MAX];
                 char *json = malloc(PATH_MAX);
-                snprintf(newfile, PATH_MAX, "uploads/%s", filename);
-                snprintf(json, PATH_MAX, "{\"url\":\"%s\"}", newfile);
+                snprintf(newfile, PATH_MAX-1, "uploads/%s", filename);
+                snprintf(json, PATH_MAX-1, "{\"url\":\"%s\"}", newfile);
                 con_info->reply = json;
-                con_info->reply_length = strnlen(json, PATH_MAX);
+                con_info->reply_length = strlen(json);
                 con_info->status = MHD_HTTP_OK;
                 strcpy(con_info->content_type, "application/json");
                 FILE *fp = fopen(newfile, "rb");

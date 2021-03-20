@@ -57,8 +57,59 @@ static char *load_file(const char *file, const char *mode, size_t *len) {
 
 
 #ifdef _WIN32
+static unsigned int crypt_hash_algorithm = 0;
+#endif
+static unsigned int crypt_dlen = 0;
+
+static void crypt_hash_init() {
+  #ifdef _WIN32
+  if(crypt_hash_algorithm != 0)
+      return;
+
+  HCRYPTPROV hProv = 0;
+  HCRYPTHASH hHash = 0;
+  BOOL res;
+
+  res = CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_FULL,
+                            CRYPT_VERIFYCONTEXT);
+  if(!res) {
+      printf("Wincrypt context failed.\n");
+      return;
+  }
+
+  res = CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash);
+  if(res) {
+      crypt_hash_algorithm = CALG_SHA_256;
+      crypt_dlen = 32;
+      CryptDestroyHash(hHash);
+      CryptReleaseContext(hProv, 0);
+      return;
+  }
+
+  res = CryptCreateHash(hProv, CALG_SHA1, 0, 0, &hHash);
+  if(res) {
+      crypt_hash_algorithm = CALG_SHA1;
+      crypt_dlen = 20;
+      CryptDestroyHash(hHash);
+      CryptReleaseContext(hProv, 0);
+      return;
+  }
+
+  CryptReleaseContext(hProv, 0);
+  printf("No hash algorithm for Wincrypt available.\n");
+
+  #else
+  if(crypt_dlen == 0)
+      crypt_dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
+  #endif
+}
+
+
+
+
+#ifdef _WIN32
 static void wincrypt_hash(const char *in, char *out) {
-    const DWORD dlen = 20;
+    const DWORD dlen = crypt_dlen;
     HCRYPTPROV hProv = 0;
     HCRYPTHASH hHash = 0;
 
@@ -101,11 +152,10 @@ static uint32_t admin_addr = 0;
 
 static int authenticate(const char *pswd) {
     unsigned int dlen;
-    #ifdef _WIN32
-    dlen = 20;
-    #else
-    dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
-    #endif
+    crypt_hash_init();
+    if(crypt_dlen == 0)
+        return 0;
+    dlen = crypt_dlen;
 
     size_t file_length = 0;
     unsigned char* registered = load_file("http/password", "rb", &file_length);
@@ -171,11 +221,10 @@ int remote_http_is_authenticated(struct RemoteConnection* con_info) {
  */
 int remote_http_change_password(const char* old_pswd, const char* new_pswd) {
     unsigned int dlen;
-    #ifdef _WIN32
-    dlen = 20;
-    #else
-    dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
-    #endif
+    crypt_hash_init();
+    if(crypt_dlen == 0)
+        return 0;
+    dlen = crypt_dlen;
 
     if(authenticate(old_pswd)) {
         FILE* fp = fopen("http/password", "wb");

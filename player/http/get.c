@@ -139,7 +139,7 @@ void remote_http_handle_get(
         return;
     
     char file_path[128];
-    snprintf(file_path, 128, PREFIX "%s", url);
+    snprintf(file_path, 127, PREFIX "%s", url);
     char *ext = strrchr(url, '.');
     if(ext == NULL) {
         error_answer(con_info, MHD_HTTP_UNSUPPORTED_MEDIA_TYPE);
@@ -166,7 +166,7 @@ void remote_http_handle_get(
         if(strncmp(ext, mimetypes[i].ext, 5) == 0) {
             char *alt = mimetypes[i].alt;
             char *mediatype = mimetypes[i].mediatype;
-            snprintf(con_info->content_type, 24, "%s/%s", mediatype, alt);
+            snprintf(con_info->content_type, 23, "%s/%s", mediatype, alt);
             binary = mimetypes[i].binary;
             isSupported = 1;
             break;
@@ -203,7 +203,7 @@ static void answer_to_get_special(
     if(strcmp(url, "/") == 0)
         url = "/index.html";
     char file_path[128];
-    snprintf(file_path, 128, PREFIX "%s", url);
+    snprintf(file_path, 127, PREFIX "%s", url);
     
     // Prepares the page footer
     static char footer_content[4096];
@@ -213,7 +213,7 @@ static void answer_to_get_special(
         size_t file_size;
         char *buffer = load_file(PREFIX "/footer.html", "r", &file_size);
         if(buffer != NULL) {
-            int ret = snprintf(footer_content, 4096, buffer,
+            int ret = snprintf(footer_content, 4095, buffer,
                                REMOTE_VERSION_STRING);
             free(buffer);
             if(ret == -1) {
@@ -423,8 +423,7 @@ static char* browse_directory(const char* path, size_t* len) {
     );
     size_t reply_length = strlen(content);
     *len = reply_length;
-    char* reply = malloc(reply_length+1);
-    reply[reply_length] = '\0';
+    char* reply = malloc(reply_length);
     memcpy(reply, content, reply_length);
     json_object_put(jobj);
     return reply;
@@ -467,8 +466,7 @@ static char *list_drives(size_t *len) {
     );
     size_t reply_length = strlen(content);
     *len = reply_length;
-    char *reply = malloc(reply_length+1);
-    reply[reply_length] = '\0';
+    char *reply = malloc(reply_length);
     memcpy(reply, content, reply_length);
     json_object_put(jobj);
     return reply;
@@ -482,7 +480,7 @@ static char *list_drives(size_t *len) {
 
 static char *get_thumbnail(const char *file, size_t *len) {
     char cmd[512];
-    snprintf(cmd, 512, "ffprobe -i \"%s\" -show_entries format=duration -v "
+    snprintf(cmd, 511, "ffprobe -i \"%s\" -show_entries format=duration -v "
                        "quiet -of csv=\"p = 0\"", file);
 
     char *read = {0};
@@ -497,14 +495,14 @@ static char *get_thumbnail(const char *file, size_t *len) {
 
     #ifdef _WIN32
     char thumbnail[PATH_MAX];
-    snprintf(thumbnail, PATH_MAX, "%s\\mpv-thumbnail.png", getenv("TEMP"));
+    snprintf(thumbnail, PATH_MAX-1, "%s\\mpv-thumbnail.png", getenv("TEMP"));
     #else
     const char *thumbnail = "/tmp/mpv-thumbnail.png";
     #endif
 
     snprintf(
         cmd,
-        512,
+        511,
         "ffmpeg -ss %lf -i \"%s\" -vf select=\"eq(pict_type\\, I), scale = "
         "320:180\" -vframes 1 \"%s\"",
         duration / 2,
