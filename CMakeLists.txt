@@ -28,33 +28,19 @@ pkg_check_modules(JSONC REQUIRED json-c)
 
 
 else()
-set(JSONC_DIR ${PROJECT_SOURCE_DIR}/external/json-c)
-file(COPY
-    ${JSONC_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/json-c.dll
-    DESTINATION ${CMAKE_BINARY_DIR}/bin
-)
-link_directories(${JSONC_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
-set(JSONC_INCLUDE_DIRS ${JSONC_DIR}/include)
+set(JSONC_INCLUDE_DIRS external/include/json-c)
 set(JSONC_LIBRARIES json-c)
-
-set(LIBMPV_DIR ${PROJECT_SOURCE_DIR}/external/libmpv)
-file(COPY
-    ${LIBMPV_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/mpv-1.dll
-    ${LIBMPV_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/d3dcompiler_43.dll
-    DESTINATION ${CMAKE_BINARY_DIR}/bin
-)
-link_directories(${LIBMPV_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
-set(MPV_INCLUDE_DIRS ${LIBMPV_DIR}/include)
+set(MPV_INCLUDE_DIRS external/include/libmpv)
 set(MPV_LIBRARIES mpv)
-
-set(LIBMHD_DIR ${PROJECT_SOURCE_DIR}/external/libmicrohttpd)
-file(COPY
-    ${LIBMHD_DIR}/bin/${CMAKE_GENERATOR_PLATFORM}/libmicrohttpd-dll.dll
-    DESTINATION ${CMAKE_BINARY_DIR}/bin
-)
-link_directories(${LIBMHD_DIR}/lib/${CMAKE_GENERATOR_PLATFORM})
-set(MHD_INCLUDE_DIRS ${LIBMHD_DIR}/include)
+set(MHD_INCLUDE_DIRS external/include/libmicrohttpd)
 set(MHD_LIBRARIES libmicrohttpd-dll)
+
+link_directories(external/lib)
+
+file(COPY
+    external/bin
+    DESTINATION ${CMAKE_BINARY_DIR}
+)
 endif()
 
 
