@@ -6,13 +6,14 @@
  * it allows all libmpv-remote functions such as media loading, pausing and
  * seeking to be usable on a web browser running on an extra client device.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
 #include "http.h"
+
 #include "con_type.h"
 
 
@@ -81,12 +82,16 @@ static int answer_to_connection(
         con_info = malloc(sizeof(struct RemoteConnection));
         con_info->address = sa->sin_addr.s_addr;
         con_info->method = met;
-        strncpy(con_info->url, url, 128);
-        strncpy(con_info->content_type, "", 24);
         con_info->status = 0;
-        con_info->reply = NULL;
         con_info->reply_length = 0;
+        con_info->reply = NULL;
         con_info->fp = NULL;
+        strncpy(con_info->url, url, 128);
+        strcpy(con_info->content_type, "");
+        strcpy(con_info->param1, "");
+        strcpy(con_info->param2, "");
+        strcpy(con_info->param3, "");
+        strcpy(con_info->param4, "");
         
         if(met == POST_METHOD) {
             con_info->postprocessor = MHD_create_post_processor(

@@ -6,9 +6,9 @@
  * Writes a command in a file and reads the command from the file to make a
  * communication from the remote service to display system.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 

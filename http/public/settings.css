@@ -1,0 +1,46 @@
+#settings-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#settings-list li {
+  padding: 12px 24px;
+  border-bottom: 1px solid #ccc;
+}
+
+#settings-list li:hover[selected="0"] {
+  background-color: #ddd;
+}
+
+#settings-list li:active[selected="0"] {
+  background-color: #ccc;
+}
+
+#settings-list li div:nth-child(1) {
+  font-size: 1.5em;
+}
+
+#settings-list li .close {
+  float: right;
+  margin-top: -4px;
+  font-size: 1em;
+}
+
+#settings-list li[selected="0"] .close {
+  display: none;
+}
+
+#settings-list .slide {
+  display: none;
+}
+
+#settings-list .slide p {
+  margin: 12px 0;
+}
+
+#settings-list .slide input[type="submit"] {
+  display: block;
+  padding: 8px;
+  margin-top: 16px;
+}

@@ -2,9 +2,9 @@
  * @file auth.c
  * @brief Authenticates the users for HTTP services
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -19,6 +19,10 @@
 #include <netinet/in.h>
 #include <gcrypt.h>
 #endif
+
+#define DEFAULT_PASSWORD "password"
+
+
 
 
 static char *load_file(const char *file, const char *mode, size_t *len) {
@@ -53,13 +57,55 @@ static char *load_file(const char *file, const char *mode, size_t *len) {
 
 
 #ifdef _WIN32
-static int authenticate_wincrypt(const char* pswd) {
+static void wincrypt_hash(const char *in, char *out) {
     const DWORD dlen = 20;
     HCRYPTPROV hProv = 0;
     HCRYPTHASH hHash = 0;
 
     CryptAcquireContext(&hProv, NULL, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
     CryptCreateHash(hProv, CALG_SHA1, 0, 0, &hHash);
+
+    DWORD len = dlen;
+    unsigned char* x = malloc(dlen);
+    CryptHashData(hHash, in, strlen(in), 0);
+    CryptGetHashParam(hHash, HP_HASHVAL, out, &len, 0);
+
+    CryptDestroyHash(hHash);
+    CryptReleaseContext(hProv, 0);
+}
+#else
+static void gcrypt_hash(const char *in, char *out) {
+    unsigned int dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
+    gcry_md_hd_t h;
+    gcry_md_open(&h, GCRY_MD_SHA256, GCRY_MD_FLAG_SECURE);
+    
+    gcry_md_write(h, in, strlen(in));
+    unsigned char* x = gcry_md_read(h, GCRY_MD_SHA256);
+    memcpy(out, x, dlen);
+
+    gcry_md_close(h);
+}
+#endif
+
+#ifdef _WIN32
+#define crypt_hash wincrypt_hash
+#else
+#define crypt_hash gcrypt_hash
+#endif
+
+
+
+
+static uint32_t admin_addr = 0;
+
+
+static int authenticate(const char *pswd) {
+    unsigned int dlen;
+    #ifdef _WIN32
+    dlen = 20;
+    #else
+    dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
+    #endif
 
     size_t file_length = 0;
     unsigned char* registered = load_file("http/password", "rb", &file_length);
@@ -70,78 +116,20 @@ static int authenticate_wincrypt(const char* pswd) {
             free(registered);
         // Rewrites a hash from a default password
         FILE* fp = fopen("http/password", "wb");
-        DWORD len = dlen;
         registered = malloc(dlen);
-        CryptHashData(hHash, "password", 8, 0);
-        CryptGetHashParam(hHash, HP_HASHVAL, registered, &len, 0);
-        for(DWORD i=0; i<dlen; i++)
+        crypt_hash(DEFAULT_PASSWORD, registered);
+        for(unsigned int i=0; i<dlen; i++)
             fputc(registered[i], fp);
         fclose(fp);
     }
 
     // Hashes the input password and compares with the registered one
-    DWORD len = dlen;
     unsigned char* x = malloc(dlen);
-    CryptHashData(hHash, pswd, strlen(pswd), 0);
-    CryptGetHashParam(hHash, HP_HASHVAL, x, &len, 0);
-    int auth = 1;
-    for(DWORD i=0; i<dlen; i++) {
-        if(x[i] != registered[i]) {
-            auth = 0;
-            break;
-        }
-    }
+    crypt_hash(pswd, x);
+    int auth = (strncmp(x, registered, dlen) == 0);
 
-    CryptDestroyHash(hHash);
-    CryptReleaseContext(hProv, 0);
     return auth;
 }
-#else
-static int authenticate_gcrypt(const char* pswd) {
-    unsigned int dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
-    gcry_md_hd_t h;
-    gcry_md_open(&h, GCRY_MD_SHA256, GCRY_MD_FLAG_SECURE);
-
-    size_t len = 0;
-    unsigned char* registered = load_file("http/password", "rb", &len);
-
-    // If the hash does not exist or the hash is invalid
-    if(registered == NULL || len != dlen) {
-        if(registered != NULL)
-            free(registered);
-        // Rewrites a hash from a default password
-        FILE* fp = fopen("http/password", "wb");
-        gcry_md_write(h, "password", 8);
-        unsigned char* x = gcry_md_read(h, GCRY_MD_SHA256);
-        registered = malloc(dlen);
-        memcpy(registered, x, dlen);
-        for(size_t i=0; i<dlen; i++)
-            fputc(registered[i], fp);
-        fclose(fp);
-        gcry_md_reset(h);
-    }
-
-    // Hashes the input password and compares with the registered one
-    gcry_md_write(h, pswd, strlen(pswd));
-    unsigned char* x = gcry_md_read(h, GCRY_MD_SHA256);
-    int auth = 1;
-    for(size_t i=0; i<dlen; i++) {
-        if(x[i] != registered[i]) {
-            auth = 0;
-            break;
-        }
-    }
-
-    gcry_md_close(h);
-    return auth;
-}
-#endif
-
-
-
-
-static uint32_t admin_addr = 0;
-
 
 /**
  * @brief Authenticates the access to special services
@@ -151,16 +139,15 @@ static uint32_t admin_addr = 0;
  *
  * @return 1 if authenticated and 0 otherwise
  */
-int remote_http_authenticate(struct RemoteConnection* con_info, const char *pswd) {
-    int auth;
-    #ifdef _WIN32
-    auth = authenticate_wincrypt(pswd);
-    #else
-    auth = authenticate_gcrypt(pswd);
-    #endif
-    if(auth)
+int remote_http_authenticate(struct RemoteConnection* con_info,
+                             const char *pswd)
+{
+    if(authenticate(pswd)) {
         admin_addr = con_info->address;
-    return auth;
+        return 1;
+    }
+    else
+        return 0;
 }
 
 /**
@@ -170,6 +157,35 @@ int remote_http_authenticate(struct RemoteConnection* con_info, const char *pswd
  *
  * @return 1 if authenticated and 0 otherwise
  */
-int remote_http_isAuthenticated(struct RemoteConnection* con_info) {
+int remote_http_is_authenticated(struct RemoteConnection* con_info) {
     return con_info->address == admin_addr;
+}
+
+/**
+ * @brief Changes the password
+ *
+ * @param old_pswd The old password
+ * @param new_pswd The new password
+ *
+ * @return 1 if the old password is correct and 0 otherwise
+ */
+int remote_http_change_password(const char* old_pswd, const char* new_pswd) {
+    unsigned int dlen;
+    #ifdef _WIN32
+    dlen = 20;
+    #else
+    dlen = gcry_md_get_algo_dlen(GCRY_MD_SHA256);
+    #endif
+
+    if(authenticate(old_pswd)) {
+        FILE* fp = fopen("http/password", "wb");
+        char* x = malloc(dlen);
+        crypt_hash(new_pswd, x);
+        for(unsigned int i=0; i<dlen; i++)
+            fputc(x[i], fp);
+        fclose(fp);
+        return 1;
+    }
+    else
+        return 0;
 }

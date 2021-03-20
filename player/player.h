@@ -6,9 +6,9 @@
  * media players, the process is made easily accessible by external programs.
  * Status monitoring, pausing and stopping by an external program or command.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -49,6 +49,14 @@ void remote_player_event_process(mpv_handle *ctx, mpv_event *event);
  * @param options Command options
  */
 void remote_player_command_process(mpv_handle *ctx, int cmd, void **options);
+
+/**
+ * @brief Translates the url with variable names to the actual file path
+ * 
+ * @param src Input string
+ * @param dest Output string
+ */
+void remote_player_process_url_variables(const char *src, char *dest);
 
 #ifdef __cplusplus
 }

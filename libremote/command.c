@@ -6,9 +6,9 @@
  * Write command in a file and read command from the file to make a
  * communication from the remote service to display system.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -99,7 +99,8 @@ REMOTE_EXPORT void remote_command_write(const char* fmt, ...) {
     #endif
     
     FILE *fp = fopen(cmdFile, "w");
-    assert(fp != NULL);
+    if(fp == NULL)
+        return;
     va_list args;
     va_start(args, fmt);
     vfprintf(fp, fmt, args);

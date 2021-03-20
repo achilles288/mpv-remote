@@ -5,9 +5,9 @@
  * Functions track and update the status attributes. To sync multiple
  * key-value pairs at once, JSON file system is used.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #define PATH_MAX _MAX_PATH
@@ -37,13 +38,14 @@
 static char name[PATH_MAX];
 static char url[PATH_MAX];
 static int mediaType = REMOTE_MEDIA_LOCAL;
-static double time = 0.0;
+static double pTime = 0.0;
 static double duration = 0.0;
 static int paused = 0;
 static int loaded = 1;
 static int running = 0;
 static int errorCode = 0;
 static char errorMessage[MESSAGE_MAX];
+static clock_t errorTime = 0;
 
 
 /**
@@ -108,7 +110,7 @@ REMOTE_EXPORT void remote_status_pull() {
         remove(jsonFile);
         return;
     }
-    time = json_object_get_double(jdata);
+    pTime = json_object_get_double(jdata);
     res = json_object_object_get_ex(jobj, "duration", &jdata);
     if(!res) {
         remove(jsonFile);
@@ -188,7 +190,7 @@ REMOTE_EXPORT int remote_status_get_media_type() { return mediaType; }
  * 
  * @return Time in seconds
  */
-REMOTE_EXPORT double remote_status_get_time() { return time; }
+REMOTE_EXPORT double remote_status_get_time() { return pTime; }
 
 /**
  * @brief Gets the playback duration of the media
@@ -245,9 +247,9 @@ REMOTE_EXPORT void remote_status_print() {
         "    running: %d\n",
         name,
         url,
-        (int)time / 3600,
-        ((int)time / 60) % 60,
-        (int)time % 60,
+        (int)pTime / 3600,
+        ((int)pTime / 60) % 60,
+        (int)pTime % 60,
         (int)duration / 3600,
         ((int)duration / 60) % 60,
         (int)duration % 60,
@@ -284,7 +286,7 @@ REMOTE_EXPORT void remote_status_push() {
     struct json_object *jobj = json_object_new_object();
     json_object_object_add(jobj, "name", json_object_new_string(name));
     json_object_object_add(jobj, "url", json_object_new_string(url));
-    json_object_object_add(jobj, "time", json_object_new_double(time));
+    json_object_object_add(jobj, "time", json_object_new_double(pTime));
     json_object_object_add(jobj, "duration", json_object_new_double(duration));
     json_object_object_add(jobj, "paused", json_object_new_boolean(paused));
     json_object_object_add(jobj, "loaded", json_object_new_boolean(loaded));
@@ -294,6 +296,7 @@ REMOTE_EXPORT void remote_status_push() {
     json_object_object_add(jerr, "code", json_object_new_int(errorCode));
     json_object_object_add(jerr, "message",
                            json_object_new_string(errorMessage));
+    json_object_object_add(jerr, "time", json_object_new_int64(errorTime));
     json_object_object_add(jobj, "error", jerr);
     
     // Writes JSON file
@@ -320,13 +323,14 @@ REMOTE_EXPORT void remote_status_push() {
 REMOTE_EXPORT void remote_status_set_default() {
     name[0] = '\0';
     url[0] = '\0';
-    time = 0.0;
+    pTime = 0.0;
     duration = 0.0;
     paused = 0;
     loaded = 0;
     running = 0;
     errorCode = 0;
     errorMessage[0] = '\0';
+    errorTime = 0;
 }
 
 /**
@@ -364,7 +368,7 @@ REMOTE_EXPORT void remote_status_set_url(const char *s) {
  * 
  * @param t Time in seconds
  */
-REMOTE_EXPORT void remote_status_set_time(double t) { time = t;}
+REMOTE_EXPORT void remote_status_set_time(double t) { pTime = t;}
 
 /**
  * @brief Updates the playback duration of the media
@@ -406,4 +410,5 @@ REMOTE_EXPORT void remote_status_set_running(int b) { running = b; }
 REMOTE_EXPORT void remote_status_set_error(int code, const char *msg) {
     errorCode = code;
     strcpy(errorMessage, msg);
+    errorTime = clock();
 }

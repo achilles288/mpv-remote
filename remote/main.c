@@ -7,9 +7,9 @@
  * the active display program. Monitors the status of the media player from
  * the JSON file written by the second program.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -125,7 +125,8 @@ int main(int argc, char *argv[]) {
     }
     else {
         remote_status_set_url(argv[1]);
-        const char *url = argv[1];
+        char url[PATH_MAX];
+        remote_environment_process_variables(argv[1], url);
         int type = remote_status_get_media_type();
         
         // Check file availability

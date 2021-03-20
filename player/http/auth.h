@@ -2,9 +2,9 @@
  * @file auth.h
  * @brief Authenticates the users for HTTP services
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
@@ -25,7 +25,8 @@ extern "C" {
  * 
  * @return 1 if authenticated and 0 otherwise
  */
-int remote_http_authenticate(struct RemoteConnection* con_info, const char* pswd);
+int remote_http_authenticate(struct RemoteConnection* con_info,
+	                         const char* pswd);
 
 /**
  * @brief To check if the user if authenticated
@@ -34,7 +35,17 @@ int remote_http_authenticate(struct RemoteConnection* con_info, const char* pswd
  * 
  * @return 1 if authenticated and 0 otherwise
  */
-int remote_http_isAuthenticated(struct RemoteConnection* con_info);
+int remote_http_is_authenticated(struct RemoteConnection* con_info);
+
+/**
+ * @brief Changes the password
+ *
+ * @param old_pswd The old password
+ * @param new_pswd The new password
+ *
+ * @return 1 if the old password is correct and 0 otherwise
+ */
+int remote_http_change_password(const char *old_pswd, const char *new_pswd);
 
 #ifdef __cplusplus
 }

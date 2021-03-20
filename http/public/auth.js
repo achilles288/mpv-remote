@@ -1,4 +1,5 @@
-function onAuthFormSubmit(event) {
+
+function authOnFormSubmit(event) {
   event.preventDefault();
   
   fetch(
@@ -40,13 +41,13 @@ window.addEventListener(
     )
       .then(response => {
         if(response.status != 200) {
-          var form = document.getElementById("auth-form");
+          let form = document.getElementById("auth-form");
           form.parentElement.style.display = "block";
         }
       })
       .catch((error) => console.error(error));
     
-    var form = document.getElementById("auth-form");
-    form.onsubmit = onAuthFormSubmit;
+    let form = document.getElementById("auth-form");
+    form.onsubmit = authOnFormSubmit;
   }
 );

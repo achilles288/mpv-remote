@@ -6,14 +6,14 @@
  * media players, the process is made easily accessible by external programs.
  * Status monitoring, pausing and stopping by an external program or command.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
 #include "player.h"
-#include "http.h"
+#include "http/http.h"
 
 #include "../libremote/libremote.h"
 
@@ -193,13 +193,14 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, exit_signal_callback);
     signal(SIGTERM, exit_signal_callback);
     
-    // Waits until a media open command is sent
+    // Loops until a media open command is sent
     while(!killRequest) {
         sleep(1000);
         int cmd = remote_command_read();
         if(cmd == REMOTE_COMMAND_OPEN) {
             void **options = remote_command_get_options();
-            char *url = (char*) options[0];
+            char url[PATH_MAX];
+            remote_environment_process_variables(options[0], url);
             remote_status_set_url(url);
             int type = remote_status_get_media_type();
             if(type == REMOTE_MEDIA_LOCAL) {
@@ -282,6 +283,14 @@ int main(int argc, char *argv[]) {
                 remote_player_command_process(ctx, cmd, options);
                 if(cmd == REMOTE_COMMAND_STOP)
                     break;
+                else if(cmd == REMOTE_COMMAND_OPEN) {
+                    paused = (int*) options[1];
+                    if(*paused)
+                        remote_command_write("open \"%s\" --paused", (char*) options[0]);
+                    else
+                        remote_command_write("open \"%s\"", (char*) options[0]);
+                    break;
+                }
                 else if(cmd == REMOTE_COMMAND_KILL) {
                     killRequest = 1;
                     break;

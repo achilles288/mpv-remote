@@ -3,11 +3,13 @@
 <head>
 <title>MPV Remote</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="external/fontawesome-free/css/all.min.css">
+<link rel="stylesheet" href="external/fontawesome-free/css/all.css">
 <link rel="stylesheet" href="external/rangeslider-js/styles.css">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="home.css">
 <script src="external/rangeslider-js/rangeslider-js.min.js"></script>
 <script src="loader.js"></script>
+<script src="browser.js"></script>
 <script src="controller.js"></script>
 </head>
 <body>
@@ -24,7 +26,7 @@
 <!-- Home page main content -->
 <div id="home-heading">
   <h1>
-    <img src="mpv-logo-128.png" alt="mpv logo">
+    <img src="images/mpv-logo-128.png" alt="mpv logo">
     <span>mpv-remote</span>
   </h1>
   <p>Load a media and play it on the server</p>
@@ -47,8 +49,8 @@
       <li class="disabled no-select" disabled><i class="fa fa-play"></i></li>
       <li class="disabled no-select" disabled><i class="fa fa-undo"></i></li>
     </ul>
-    <div id="media-controller-tools" style="display: none">
-      <table style="width: 100%;">
+    <div id="media-controller-tools" style="display: none;">
+      <table>
         <tr>
           <td>
             <input id="time-control" type="range" min="1" max="1000" value="0">
@@ -64,26 +66,41 @@
 
 <!-- Sub content -->
 <div id="content">
-  <div>
-    <h2>Overview</h2>
-    <p>
-        Remote-controlled media player for a TV connected to a PC. There are
-        cases where a person plays a media downloaded in his laptop connecting 
-        the laptop to a TV via an HDMI cable. With this application, the user 
-        can manipulate the media playing by an additional device like 
-        smartphone from his chair through HTTP connection.
-    </p>
-  </div>
+  <h2>Overview</h2>
+  <p>
+      Remote-controlled media player for a TV connected to a PC. There are
+      cases where a person plays a media downloaded in his laptop connecting 
+      the laptop to a TV via an HDMI cable. With this application, the user 
+      can manipulate the media playing by an additional device like 
+      smartphone from his chair through HTTP connection.
+  </p>
 </div>
 
 <!-- Footer -->
 %s
+
+<!-- Loading spinner -->
+<div id="loading-screen" class="modal">
+  <form>
+    <div class="loader"></div>
+  </form>
+</div>
 
 <!-- File browser window -->
 <div class="modal">
   <form id="media-loader-browser-win" method="post" action="command">
     <button type="button" class="close">&times;</button>
     <h2>Browse on server</h2>
+    <div id="browser-navi">
+      <ul>
+        <li id="browser-navi-home" class="fas fa-home"></li>
+        <li id="browser-navi-up" class="fas fa-arrow-up"></li>
+      </ul>
+      <div id="browser-navi-directory"><i class="fas fa-folder"></i></div>
+    </div>
+    <div id="browser-panel">
+    </div>
+    <input type="hidden" name="url">
     <input type="submit">
   </form>
 </div>

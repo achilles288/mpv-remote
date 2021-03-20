@@ -8,19 +8,26 @@
 
 [Setup]
 AppName=MPV Remote
-AppVersion=1.0.1
+AppVersion=1.1.0
+LicenseFile=LICENSE
 WizardStyle=modern
 DefaultDirName={autopf}\MPV Remote
 DefaultGroupName=MPV
 Compression=lzma2
 SolidCompression=yes
 OutputDir=userdocs:MVP Remote Setup
-ArchitecturesAllowed=x64           
-ArchitecturesInstallIn64BitMode=x64
+//ArchitecturesAllowed=x64           
+//ArchitecturesInstallIn64BitMode=x64
 
-[Files]                                   
-Source: "d3dcompiler_43.dll"; DestDir: "{app}" 
+[Files]
+Source: "http\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs                                         
+Source: "d3dcompiler_43.dll"; DestDir: "{app}"      
+Source: "ffmpeg.exe"; DestDir: "{app}"                
+Source: "ffprobe.exe"; DestDir: "{app}"              
+Source: "json-c.dll"; DestDir: "{app}"                
+Source: "libmicrohttpd-dll.dll"; DestDir: "{app}"      
 Source: "mpv-1.dll"; DestDir: "{app}"
-Source: "mpv-play.exe"; DestDir: "{app}"
-Source: "mpv-remote.exe"; DestDir: "{app}"
-Source: "README.md"; DestDir: "{app}"; Flags: isreadme
+Source: "mpv-play.exe"; DestDir: "{app}"        
+Source: "mpv-remote.dll"; DestDir: "{app}"
+Source: "mpv-remote.exe"; DestDir: "{app}"   
+Source: "youtube-dl.exe"; DestDir: "{app}"

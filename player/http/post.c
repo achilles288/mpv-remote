@@ -2,17 +2,21 @@
  * @file post.c
  * @brief Handles the POST requests for mpv-play
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
-#include "auth.h"
 #include "../../libremote/libremote.h"
+#include "auth.h"
 
 #include <string.h>
 #include <stdlib.h>
+
+#ifdef _WIN32
+#define PATH_MAX _MAX_PATH
+#endif
 
 
 int remote_http_handle_post(
@@ -24,14 +28,35 @@ int remote_http_handle_post(
 )
 {
     struct RemoteConnection *con_info = *con_cls;
+    int match = 0;
     
-    if(strcmp(url, "/command") != 0 && strcmp(url, "/upload") != 0 &&
-       strcmp(url, "/authenticate") != 0)
-    {
+    static const char* listedURL1[] = {
+        "/command", "/upload", "/authenticate", "/change-password"
+    };
+
+    for(int i=0; i<4; i++) {
+        if(strcmp(url, listedURL1[i]) == 0) {
+            match = 1;
+            break;
+        }
+    }
+    if(!match) {
         con_info->status = MHD_HTTP_NOT_FOUND;
         return MHD_NO;
     }
+
+    // The requested URL requires no authentication
+    match = (strcmp(url, "/authenticate") == 0);
+
+    // If the requested URL requires authentication
+    if(!match) {
+        if(!remote_http_is_authenticated(con_info)) {
+            con_info->status = MHD_HTTP_UNAUTHORIZED;
+            return MHD_NO;
+        }
+    }
     
+    // Processes the request
     if(*upload_data_size != 0) {
         MHD_post_process(con_info->postprocessor, upload_data,	
 	                     *upload_data_size);
@@ -57,32 +82,41 @@ int remote_http_iterate_post(
 {
     struct RemoteConnection* con_info = coninfo_cls;
 
-    // Limit data size for non-blob
-    if(strcmp(key, "blob") != 0 && size > 128) {
-        con_info->status = MHD_HTTP_BAD_REQUEST;
-        return MHD_YES;
-    }
-
-    // POST requests that do not require authentication
     if(strcmp(con_info->url, "/authenticate") == 0) {
         if(strcmp(key, "password") == 0) {
             int auth = remote_http_authenticate(con_info, data);
             con_info->status = auth ? MHD_HTTP_OK : MHD_HTTP_UNAUTHORIZED;
-            return MHD_NO;
+            return MHD_YES;
         }
-        return MHD_YES;
     }
-    
-    int auth = remote_http_isAuthenticated(con_info);
-    con_info->status = auth ? MHD_HTTP_OK : MHD_HTTP_UNAUTHORIZED;
-    if(!auth)
-        return MHD_YES;
-    
-    // POST requests that require authentication
-    if(strcmp(con_info->url, "/command") == 0) {
+    else if(strcmp(con_info->url, "/change-password") == 0) {
+        int rightKey = 0;
+        if(strcmp(key, "old-password") == 0) {
+            strcpy(con_info->param1, data);
+            rightKey = 1;
+        }
+        else if(strcmp(key, "password") == 0) {
+            strcpy(con_info->param2, data);
+            rightKey = 1;
+        }
+
+        if(strlen(con_info->param1) && strlen(con_info->param2)) {
+            int auth = remote_http_change_password(
+                con_info->param1,
+                con_info->param2
+            );
+            con_info->status = auth ? MHD_HTTP_OK : MHD_HTTP_UNAUTHORIZED;
+            return MHD_YES;
+        }
+        else if(rightKey)
+            return MHD_YES;
+
+    }
+    else if(strcmp(con_info->url, "/command") == 0) {
         if(strcmp(key, "command") == 0) {
             remote_command_write(data);
-            return MHD_NO;
+            con_info->status = MHD_HTTP_OK;
+            return MHD_YES;
         }
     }
     else if(strcmp(con_info->url, "/upload") == 0) {
@@ -93,13 +127,13 @@ int remote_http_iterate_post(
                     return MHD_YES;
                 }
                 #ifdef _WIN32
-                CreateDirectory("upload", NULL);
+                CreateDirectory("uploads", NULL);
                 #else
-                mkdir("upload", 0700);
+                mkdir("uploads", 0700);
                 #endif
 
                 // Extract name, extension and file type from full name
-                char name[64], ext[6], type[12];
+                char name[PATH_MAX], ext[6], type[12];
                 strcpy(ext, "");
                 strcpy(type, "");
                 char* ptr;
@@ -110,7 +144,7 @@ int remote_http_iterate_post(
                     name[ptr-filename] = '\0';
                 }
                 else
-                    strncpy(name, filename, 64);
+                    strncpy(name, filename, PATH_MAX);
                 ptr = strrchr(content_type, '/');
                 if(ptr != NULL) {
                     memcpy(type, content_type, ptr-content_type);
@@ -123,12 +157,13 @@ int remote_http_iterate_post(
                     return MHD_YES;
                 }
 
-                char newfile[96];
-                char *json = malloc(96);
-                snprintf(newfile, 96, "upload/%s", filename);
-                snprintf(json, 96, "{\"url\":\"%s\"}", newfile);
+                char newfile[PATH_MAX];
+                char *json = malloc(PATH_MAX);
+                snprintf(newfile, PATH_MAX, "uploads/%s", filename);
+                snprintf(json, PATH_MAX, "{\"url\":\"%s\"}", newfile);
                 con_info->reply = json;
-                con_info->reply_length = strnlen(json, 96);
+                con_info->reply_length = strnlen(json, PATH_MAX);
+                con_info->status = MHD_HTTP_OK;
                 strcpy(con_info->content_type, "application/json");
                 FILE *fp = fopen(newfile, "rb");
 
@@ -149,5 +184,7 @@ int remote_http_iterate_post(
         }
     }
     
+    if(con_info->status == 0)
+        con_info->status = MHD_HTTP_BAD_REQUEST;
     return MHD_YES;
 }

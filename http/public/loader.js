@@ -1,3 +1,4 @@
+var loaderLoadingScreen;
 var loaderBrowserWindow;
 var loaderURLWindow;
 var loaderFileInput;
@@ -5,31 +6,33 @@ var loaderStatus;
 var loaderTimer;
 var loaderStartTime;
 var loaderLoading = false;
+var loaderError = {code: 0, message: "", time: 0}
 
 
 
 
-function onLoaderLoaded(data) {
+function loaderOnLoaded(data) {
   loaderStatus.innerHTML = "";
   window.clearInterval(loaderTimer);
   loaderLoading = false;
+  loaderLoadingScreen.style.display = "none";
   
-  var name = document.getElementById("media-name");
+  let name = document.getElementById("media-name");
   name.innerHTML = (data.name.trim() != "") ? data.name : "Untitled";
   name.style.color = "inherit";
   
-  var controllerButtons
+  let controllerButtons
     = document.getElementById("media-controller-buttons").children;
   
   for(var i=0; i<controllerButtons.length; i++)
     controllerButtons[i].classList.remove("disabled");
   
-  var tools = document.getElementById("media-controller-tools");
-  var timeLabel = document.getElementById("time-label");
+  let tools = document.getElementById("media-controller-tools");
+  let timeLabel = document.getElementById("time-label");
   tools.style.display = "block";
-  var hr = Math.floor(data.duration / 3600);
-  var min = Math.floor(data.duration / 60) % 60;
-  var sec = Math.floor(data.duration) % 60;
+  let hr = Math.floor(data.duration / 3600);
+  let min = Math.floor(data.duration / 60) % 60;
+  let sec = Math.floor(data.duration) % 60;
   hr = String(hr);
   min = String(min).padStart(2, "0");
   sec = String(sec).padStart(2, "0");
@@ -39,12 +42,13 @@ function onLoaderLoaded(data) {
 
 
 
-function onLoaderIdle(event) {
-  var t = new Date().getTime();
+function loaderOnIdle(event) {
+  let t = new Date().getTime();
   if(t - loaderStartTime > 31000) {
     loaderStatus.innerHTML = "Sever not responding";
     window.clearInterval(loaderTimer);
     loaderLoading = false;
+    loaderLoadingScreen.style.display = "none";
     return;
   }
   
@@ -64,13 +68,17 @@ function onLoaderIdle(event) {
     })
     .then(data => {
       if(data.loaded)
-        onLoaderLoaded(data);
+        loaderOnLoaded(data);
       
       if(data.error.code != 0) {
-        loaderStatus.innerHTML = data.error.message;
-        window.clearInterval(loaderTimer);
-        loaderLoading = false;
+        if(loaderError.time != data.error.time) {
+          loaderStatus.innerHTML = data.error.message;
+          window.clearInterval(loaderTimer);
+          loaderLoading = false;
+          loaderLoadingScreen.style.display = "none";
+        }
       }
+      loaderError = data.error;
     })
     .catch((error) => console.error(error));
 }
@@ -78,12 +86,13 @@ function onLoaderIdle(event) {
 
 
 
-function loaderLoad(win, url) {
+function loaderLoad(url) {
   if(loaderLoading)
     return;
   
-  var formData = new FormData();
+  let formData = new FormData();
   formData.append("command", 'open "' + url + '" --pause');
+  loaderStatus.innerHTML = "";
   
   fetch(
     "command",
@@ -95,18 +104,16 @@ function loaderLoad(win, url) {
   )
     .then(response => {
       if(response.status == 200) {
-        win.getElementsByClassName("error")[0].innerHTML = "";
-        win.parentElement.style.display = "none";
         loaderStartTime = new Date().getTime();
         loaderLoading = true;
-        loaderTimer = window.setInterval(onLoaderIdle, 100);
+        loaderLoadingScreen.style.display = "block";
+        loaderTimer = window.setInterval(loaderOnIdle, 100);
       }
       else if(response.status == 401) {
-        win.getElementsByClassName("error")[0].innerHTML
-          = "Error 401 (Unauthorized)";
+        loaderStatus.innerHTML = "Error 401 (Unauthorized)";
       }
       else {
-        win.getElementsByClassName("error")[0].innerHTML = "Error";
+        loaderStatus.innerHTML = "Error";
       }
     })
     .catch((error) => console.error(error));
@@ -115,34 +122,23 @@ function loaderLoad(win, url) {
 
 
 
-function onLoaderBrowse(event) {
-  
-}
-
-function onLoaderBrowserSubmit(event) {
-  
-}
-
-
-
-
-function onLoaderURL(event) {
-  if(loaderLoading == false)
-    loaderURLWindow.parentElement.style.display = "block";
-}
-
-function onLoaderURLSubmit(event) {
+function loaderOnBrowserSubmit(event) {
   event.preventDefault();
-  var url = document.getElementById("media-loader-url-input").value;
-  loaderLoad(event.target, url);
+  let formData = new FormData(loaderBrowserWindow);
+  let url = formData.get("url");
+  if(!url)
+    return;
+  loaderBrowserWindow.parentElement.style.display = "none";
+  loaderLoad(url);
 }
 
 
 
 
-function onLoaderUpload(event) {
-  var formData = new FormData();
-  formData.append("blob", loaderFileInput.files[0]);
+function loaderOnUpload(event) {
+  let formData = new FormData();
+  formData.append("blob", event.target.files[0]);
+  loaderLoadingScreen.style.display = "block";
   
   fetch(
     "upload",
@@ -154,15 +150,32 @@ function onLoaderUpload(event) {
     }
   )
     .then(response => {
+      loaderLoadingScreen.style.display = "none";
       if(response.status == 200)
         return Promise.resolve(response.json());
-      else
+      else {
+        loaderStatus.innerHTML = "Error uploading";
         return Promise.reject(new Error("Error uploading"));
+      }
     })
     .then(data => {
       loaderLoad(data.url);
     })
     .catch((error) => console.error(error));
+}
+
+
+
+
+function loaderOnURL(event) {
+  loaderURLWindow.parentElement.style.display = "block";
+}
+
+function loaderOnURLSubmit(event) {
+  event.preventDefault();
+  let url = document.getElementById("media-loader-url-input").value;
+  loaderURLWindow.parentElement.style.display = "none";
+  loaderLoad(url);
 }
 
 
@@ -178,17 +191,16 @@ function loaderCloseWindow(event) {
 window.addEventListener(
   "load",
   function() {
-    var buttons = document.getElementById("media-loader-buttons").children;
-    buttons[0].onclick = onLoaderBrowse;
-    buttons[1].onclick = onLoaderUpload;
-    buttons[2].onclick = onLoaderURL;
+    let buttons = document.getElementById("media-loader-buttons").children;
+    buttons[2].onclick = loaderOnURL;
     
+    loaderLoadingScreen = document.getElementById("loading-screen");
     loaderBrowserWindow = document.getElementById("media-loader-browser-win");
     loaderURLWindow = document.getElementById("media-loader-url-win");
     loaderStatus = document.getElementById("media-loader-status");
     
-    loaderBrowserWindow.onsubmit = onLoaderBrowserSubmit;
-    loaderURLWindow.onsubmit = onLoaderURLSubmit;
+    loaderBrowserWindow.onsubmit = loaderOnBrowserSubmit;
+    loaderURLWindow.onsubmit = loaderOnURLSubmit;
     
     loaderBrowserWindow.getElementsByClassName("close")[0].onclick
       = loaderCloseWindow;
@@ -201,8 +213,9 @@ window.addEventListener(
     buttons[1].onclick = function(event) {
       if(loaderLoading)
         return;
-      var clickEvent = new MouseEvent('click');
+      let clickEvent = new MouseEvent("click");
       loaderFileInput.dispatchEvent(clickEvent);
     };
+    loaderFileInput.oninput = loaderOnUpload;
   }
 );

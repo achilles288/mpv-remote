@@ -64,8 +64,11 @@ include_directories(
 # Common function library
 # 
 add_library(mpv-remote SHARED
+    libremote/cmd_rsp/cmd_rsp.c
+    libremote/cmd_rsp/cmd_rsp.h
     libremote/command.c
     libremote/command.h
+    libremote/environment.c
     libremote/libremote.h
     libremote/logger.c
     libremote/logger.h

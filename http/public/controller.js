@@ -12,21 +12,21 @@ var controllerLoaded = false;
 
 
 function controllerClientSetEnabled(en) {
-  var name = document.getElementById("media-name");
+  let name = document.getElementById("media-name");
   name.style.color = (en) ? "inherit" : "transparent";
   
-  var tools = document.getElementById("media-controller-tools");
+  let tools = document.getElementById("media-controller-tools");
   tools.style.display = (en) ? "block" : "none";
   
-  var controllerButtons
+  let controllerButtons
     = document.getElementById("media-controller-buttons").children;
   
   if(en) {
-    for(var i=0; i<controllerButtons.length; i++)
+    for(let i=0; i<controllerButtons.length; i++)
       controllerButtons[i].classList.remove("disabled");
   }
   else {
-    for(var i=0; i<controllerButtons.length; i++)
+    for(let i=0; i<controllerButtons.length; i++)
       controllerButtons[i].classList.add("disabled");
     
     controllerClientSetPaused(true);
@@ -44,17 +44,17 @@ function controllerClientSetTime(time, moveSlider=true) {
     controllerTime = time;
   
   if(moveSlider) {
-    var val = (time/controllerDuration) * 1000;
+    let val = (time/controllerDuration) * 1000;
     controllerSlider.update({value:Math.floor(val)}, false);
   }
-  var timeLabel = document.getElementById("time-label");
-  var hr = Math.floor(time / 3600);
-  var min = Math.floor(time / 60) % 60;
-  var sec = Math.floor(time) % 60;
+  let timeLabel = document.getElementById("time-label");
+  let hr = Math.floor(time / 3600);
+  let min = Math.floor(time / 60) % 60;
+  let sec = Math.floor(time) % 60;
   hr = String(hr);
   min = String(min).padStart(2, "0");
   sec = String(sec).padStart(2, "0");
-  var str = timeLabel.innerHTML.substr(7, 10);
+  let str = timeLabel.innerHTML.substr(7, 10);
   timeLabel.innerHTML = hr + ":" + min + ":" + sec + str;
 }
 
@@ -104,20 +104,20 @@ function controllerSync() {
       controllerLoaded = data.loaded;
       controllerClientSetEnabled(data.loaded);
       if(data.loaded) {
-        var mediaName = "Untitled"
+        let mediaName = "Untitled"
         if(data.name.trim() != "")
           mediaName = data.name;
         document.getElementById("media-name").innerHTML = mediaName;
         
         controllerDuration = data.duration;
-        var timeLabel = document.getElementById("time-label");
-        var hr = Math.floor(data.duration / 3600);
-        var min = Math.floor(data.duration / 60) % 60;
-        var sec = Math.floor(data.duration) % 60;
+        let timeLabel = document.getElementById("time-label");
+        let hr = Math.floor(data.duration / 3600);
+        let min = Math.floor(data.duration / 60) % 60;
+        let sec = Math.floor(data.duration) % 60;
         hr = String(hr);
         min = String(min).padStart(2, "0");
         sec = String(sec).padStart(2, "0");
-        var str = timeLabel.innerHTML.substr(0, 10);
+        let str = timeLabel.innerHTML.substr(0, 10);
         timeLabel.innerHTML = str + hr + ":" + min + ":" + sec;
         
         controllerClientSetTime(data.time);
@@ -134,7 +134,7 @@ function controllerSetPaused(paused) {
   if(controllerLoaded == false)
     controllerSync();
   
-  var formData = new FormData();
+  let formData = new FormData();
   formData.append("command", "pause " + (paused ? "1" : "0"));
   
   fetch(
@@ -161,7 +161,7 @@ function controllerMove(time) {
   if(controllerLoaded == false)
     controllerSync();
   
-  var formData = new FormData();
+  let formData = new FormData();
   formData.append("command", "move " + time);
   
   fetch(
@@ -188,7 +188,7 @@ function controllerSeek(time) {
   if(controllerLoaded == false)
     controllerSync();
   
-  var formData = new FormData();
+  let formData = new FormData();
   formData.append("command", "seek " + time);
   
   fetch(
@@ -214,13 +214,13 @@ function controllerSeek(time) {
 window.addEventListener(
   "load",
   function() {
-    var buttons = document.getElementById("media-controller-buttons").children;
+    let buttons = document.getElementById("media-controller-buttons").children;
     buttons[0].onclick = ((event) => controllerMove(-15));
     buttons[2].onclick = ((event) => controllerMove(15));
     controllerPauseButton = buttons[1];
     
     controllerTimeLabel = document.getElementById("time-label");
-    var slider = document.getElementById("time-control");
+    let slider = document.getElementById("time-control");
     controllerSlider = new rangesliderJs.RangeSlider(
       slider,
       {

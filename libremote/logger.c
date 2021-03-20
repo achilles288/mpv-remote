@@ -6,9 +6,9 @@
  * directly. Instead, it prints a log file which can be read and printed out
  * by the client terminal running remote program.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 

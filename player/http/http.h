@@ -6,9 +6,9 @@
  * it allows all libmpv-remote functions such as media loading, pausing and
  * seeking to be usable on a web browser running on an extra client device.
  * 
- * @copyright Copyright (c) 2020 Khant Kyaw Khaung
+ * @copyright Copyright (c) 2021 Khant Kyaw Khaung
  * 
- * @license{This project is released under the MIT License.}
+ * @license{This project is released under the GPL License.}
  */
 
 
