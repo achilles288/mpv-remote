@@ -118,12 +118,21 @@ set_target_properties(player
     PROPERTIES OUTPUT_NAME "mpv-play"
 )
 
+if(Unix)
 target_link_libraries(player PUBLIC
     mpv-remote
     ${MPV_LIBRARIES}
     ${MHD_LIBRARIES}
     ${GCRY_LIBRARIES}
 )
+else()
+target_link_libraries(player PUBLIC
+    mpv-remote
+    ${MPV_LIBRARIES}
+    ${MHD_LIBRARIES}
+    Iphlpapi
+)
+endif()
 
 
 

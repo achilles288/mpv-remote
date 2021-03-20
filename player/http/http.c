@@ -16,6 +16,11 @@
 
 #include "con_type.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <iphlpapi.h>
+#endif
+
 
 extern void remote_http_handle_get(
     struct MHD_Connection* connection,
@@ -169,6 +174,35 @@ void request_completed(void *cls, struct MHD_Connection *connection,
 
 static struct MHD_Daemon *http_daemon = NULL;
 
+static void get_ip_address(char *addr) {
+    ULONG Err;
+    PIP_ADAPTER_INFO pAdapt;
+    DWORD AdapterInfoSize;
+    PIP_ADDR_STRING pAddrStr;
+
+    if((Err = GetAdaptersInfo(NULL, &AdapterInfoSize)) != 0) {
+        if(Err != ERROR_BUFFER_OVERFLOW)
+            return;
+    }
+
+    pAdapt = (PIP_ADAPTER_INFO)GlobalAlloc(GPTR, AdapterInfoSize);
+    if(pAdapt == NULL) {
+        return;
+    }
+
+    if((Err = GetAdaptersInfo(pAdapt, &AdapterInfoSize)) != 0) {
+        return;
+    }
+
+    if(pAdapt) {
+        pAddrStr = &(pAdapt->IpAddressList);
+        if(pAddrStr) {
+            strncpy(addr, pAddrStr->IpAddress.String, 15);
+        }
+        pAdapt = pAdapt->Next;
+    }
+}
+
 /**
  * @brief Starts running a web server on a parallel thread
  * 
@@ -183,6 +217,10 @@ int remote_http_start_daemon() {
         MHD_OPTION_NOTIFY_COMPLETED, &request_completed,
         NULL, MHD_OPTION_END
     );
+
+    char ip_addr[16] = "0.0.0.0";
+    get_ip_address(ip_addr);
+    printf("HTTP services can be used at http://%s:%d\n", ip_addr, PORT);
     
     if(http_daemon == NULL)
         return 1;
