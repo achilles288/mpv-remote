@@ -8,26 +8,30 @@
 
 [Setup]
 AppName=MPV Remote
+AppPublisher=Khant Kyaw Khaung
 AppVersion=1.1.0
-LicenseFile=LICENSE
+LicenseFile=..\..\LICENSE
 WizardStyle=modern
-DefaultDirName={autopf}\MPV Remote
-DefaultGroupName=MPV
+DefaultDirName={autopf}\MPV Remote         
+PrivilegesRequired=lowest
 Compression=lzma2
 SolidCompression=yes
 OutputDir=userdocs:MVP Remote Setup
-//ArchitecturesAllowed=x64           
-//ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64           
+ArchitecturesInstallIn64BitMode=x64
+
+#define BuildDirectory "..\..\build\bin"
 
 [Files]
-Source: "http\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs                                         
-Source: "d3dcompiler_43.dll"; DestDir: "{app}"      
-Source: "ffmpeg.exe"; DestDir: "{app}"                
-Source: "ffprobe.exe"; DestDir: "{app}"              
-Source: "json-c.dll"; DestDir: "{app}"                
-Source: "libmicrohttpd-dll.dll"; DestDir: "{app}"      
-Source: "mpv-1.dll"; DestDir: "{app}"
-Source: "mpv-play.exe"; DestDir: "{app}"        
-Source: "mpv-remote.dll"; DestDir: "{app}"
-Source: "mpv-remote.exe"; DestDir: "{app}"   
-Source: "youtube-dl.exe"; DestDir: "{app}"
+Source: "..\..\http\*"; DestDir: "{app}\http"; Flags: ignoreversion recursesubdirs
+Source: "..\..\external\bin\*"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BuildDirectory}\mpv-play.exe"; DestDir: "{app}"  
+Source: "{#BuildDirectory}\mpv-remote.exe"; DestDir: "{app}" 
+Source: "{#BuildDirectory}\mpv-remote.dll"; DestDir: "{app}"              
+Source: "mpv-play-start.bat"; DestDir: "{app}"                                               
+
+[Run]
+Filename: "{app}\mpv-play-start.bat"; Description: "{cm:LaunchProgram,MPV remote player}"; Flags: nowait postinstall skipifsilent
+
+[Tasks]
+Name: "StartMenuEntry" ; Description: "Start MPV remote player when Windows starts" ; GroupDescription: "Windows Startup"; MinVersion: 4,4;
