@@ -143,6 +143,7 @@ function browserBrowse(path) {
             thumb.src = "thumbnail?file=" + browserDirectory + "/" + name;
             thumb.classList.add("thumbnail");
             thumb.onload = ((event) => event.target.nextSibling.remove());
+            thumb.onerror = ((event) => event.target.remove());
             elem.appendChild(thumb);
           }
           else if(type == "audio")
