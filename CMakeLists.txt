@@ -118,7 +118,7 @@ set_target_properties(player
     PROPERTIES OUTPUT_NAME "mpv-play"
 )
 
-if(Unix)
+if(UNIX)
 target_link_libraries(player PUBLIC
     mpv-remote
     ${MPV_LIBRARIES}

@@ -16,9 +16,15 @@
 
 #include "con_type.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <iphlpapi.h>
+#else
+#include <ifaddrs.h>
+#include <netdb.h>
 #endif
 
 
@@ -175,6 +181,7 @@ void request_completed(void *cls, struct MHD_Connection *connection,
 static struct MHD_Daemon *http_daemon = NULL;
 
 static void get_ip_address(char *addr) {
+    #ifdef _WIN32
     ULONG Err;
     PIP_ADAPTER_INFO pAdapt;
     DWORD AdapterInfoSize;
@@ -201,6 +208,39 @@ static void get_ip_address(char *addr) {
         }
         pAdapt = pAdapt->Next;
     }
+    
+    #else
+    struct ifaddrs *ifa;
+    int family, s;
+    char host[NI_MAXHOST];
+
+    if(getifaddrs(&ifa) == -1)
+        return;
+    
+    while(ifa != NULL) {
+        if(ifa->ifa_addr == NULL)
+            continue;
+        
+        s = getnameinfo(
+            ifa->ifa_addr,
+            sizeof(struct sockaddr_in),
+            host,
+            NI_MAXHOST,
+            NULL,
+            0,
+            NI_NUMERICHOST
+        );
+
+        if(ifa->ifa_addr->sa_family==AF_INET) {
+            if(s != 0) {
+                return;
+            }
+            strncpy(addr, host, 15);
+        }
+        ifa = ifa->ifa_next;
+    }
+    freeifaddrs(ifa);
+    #endif
 }
 
 /**

@@ -392,7 +392,7 @@ int cmd_rsp(const char* command, char** chunk, unsigned int chunk_size) {
 }
 
 int cmd_no_rsp(const char* command) {
-    FILE* fp = popen(command, "r");
+    FILE *fp = popen(command, "r");
     if(fp == NULL)
         return -1;
     fclose(fp);

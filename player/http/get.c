@@ -19,6 +19,8 @@
 #include <Windows.h>
 #include <tchar.h>
 #define PATH_MAX _MAX_PATH
+#else
+#include <dirent.h>
 #endif
 
 #include <json.h>
@@ -148,7 +150,7 @@ void remote_http_handle_get(
     ext += 1;
     
     // Checks the extensions to determine the mimetype
-    const struct MimeType mimetypes[] = {
+    static const struct MimeType mimetypes[] = {
         {"html", "html", "text", 0},
         {"css", "css", "text", 0},
         {"js", "javascript", "text", 0},
@@ -164,8 +166,8 @@ void remote_http_handle_get(
 
     for(int i=0; i<9; i++) {
         if(strncmp(ext, mimetypes[i].ext, 5) == 0) {
-            char *alt = mimetypes[i].alt;
-            char *mediatype = mimetypes[i].mediatype;
+            const char *alt = mimetypes[i].alt;
+            const char *mediatype = mimetypes[i].mediatype;
             snprintf(con_info->content_type, 23, "%s/%s", mediatype, alt);
             binary = mimetypes[i].binary;
             isSupported = 1;
@@ -341,21 +343,32 @@ static void answer_to_get_special(
 
 
 
-static char* browse_directory(const char* path, size_t* len) {
+static char *browse_directory(const char *path, size_t *len) {
     #ifdef _WIN32
     WIN32_FIND_DATA ffd;
     TCHAR szDir[PATH_MAX];
     HANDLE hFind = INVALID_HANDLE_VALUE;
     DWORD dwError = 0;
-
     _stprintf(szDir, "%s\\*", path);
-
+    hFind = FindFirstFile(szDir, &ffd);
+    #else
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(path);
+    #endif
+    
     struct json_object* jobj = json_object_new_object();
     struct json_object* jarray = json_object_new_array();
     json_object_object_add(jobj, "files", jarray);
-    hFind = FindFirstFile(szDir, &ffd);
 
+    #ifdef _WIN32
     if(hFind == INVALID_HANDLE_VALUE) {
+    #else
+    if(d) {
+        dir = readdir(d);
+    }
+    else {
+    #endif
         const char* content = json_object_to_json_string_ext(
             jobj,
             JSON_C_TO_STRING_PRETTY
@@ -377,15 +390,26 @@ static char* browse_directory(const char* path, size_t* len) {
     };
 
     do {
-        if(strcmp(ffd.cFileName, ".") == 0 || strcmp(ffd.cFileName, "..") == 0)
+        const char *filename;
+        #ifdef _WIN32
+        filename = ffd.cFileName;
+        #else
+        filename = dir->d_name;
+        #endif
+        
+        if(strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0)
             continue;
-
+        
         const char *type = NULL;
+        #ifdef _WIN32
         if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        #else
+        if(dir->d_type == DT_DIR) {
+        #endif
             type = "directory";
         }
         else {
-            char *ext = strrchr(ffd.cFileName, '.');
+            char *ext = strrchr(filename, '.');
             while(ext != NULL) {
                 ext += 1;
                 for(int i=0; i<8; i++) {
@@ -409,14 +433,23 @@ static char* browse_directory(const char* path, size_t* len) {
         if(type != NULL) {
             struct json_object *jfile = json_object_new_object();
             json_object_object_add(jfile, "name",
-                                   json_object_new_string(ffd.cFileName));
+                                   json_object_new_string(filename));
             json_object_object_add(jfile, "type",
                                    json_object_new_string(type));
             json_object_array_add(jarray, jfile);
         }
+    #ifdef _WIN32
     } while(FindNextFile(hFind, &ffd) != 0);
-
+    #else
+    } while((dir = readdir(d)) != NULL);
+    #endif
+    
+    #ifdef _WIN32
     FindClose(hFind);
+    #else
+    closedir(d);
+    #endif
+    
     const char *content = json_object_to_json_string_ext(
         jobj,
         JSON_C_TO_STRING_PRETTY
@@ -427,9 +460,6 @@ static char* browse_directory(const char* path, size_t* len) {
     memcpy(reply, content, reply_length);
     json_object_put(jobj);
     return reply;
-    #else
-    return NULL;
-    #endif
 }
 
 
@@ -470,8 +500,11 @@ static char *list_drives(size_t *len) {
     memcpy(reply, content, reply_length);
     json_object_put(jobj);
     return reply;
+    
     #else
-    return NULL;
+    char media_path[PATH_MAX] = "/media/";
+    strcat(media_path, getenv("USER"));
+    return browse_directory(media_path, len);
     #endif
 }
 
@@ -482,7 +515,7 @@ static char *get_thumbnail(const char *file, size_t *len) {
     char cmd[512];
     snprintf(cmd, 511, "ffprobe -i \"%s\" -show_entries format=duration -v "
                        "quiet -of csv=\"p = 0\"", file);
-
+    
     char *read = {0};
     read = calloc(16, 1);
     cmd_rsp(cmd, &read, 16);
@@ -492,28 +525,31 @@ static char *get_thumbnail(const char *file, size_t *len) {
     }
     double duration = atof(read);
     free(read);
-
+    
     #ifdef _WIN32
     char thumbnail[PATH_MAX];
     snprintf(thumbnail, PATH_MAX-1, "%s\\mpv-thumbnail.png", getenv("TEMP"));
     #else
     const char *thumbnail = "/tmp/mpv-thumbnail.png";
     #endif
-
+    
     snprintf(
         cmd,
-        511,
+        511 - 25,
         "ffmpeg -ss %lf -i \"%s\" -vf select=\"eq(pict_type\\, I), scale = "
         "320:180\" -vframes 1 \"%s\"",
         duration / 2,
         file,
         thumbnail
     );
-
+    #ifdef _WIN32
+    strcat(cmd, " >nul 2>nul");
+    #else
+    strcat(cmd, " >>/dev/null 2>>/dev/null");
+    #endif
+    
     remove(thumbnail);
-    read = calloc(8192, 1);
-    cmd_rsp(cmd, &read, 8192);
-    free(read);
+    system(cmd);
     char *content = load_file(thumbnail, "rb", len);
     remove(thumbnail);
     return content;

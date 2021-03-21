@@ -16,6 +16,9 @@
 
 #ifdef _WIN32
 #define PATH_MAX _MAX_PATH
+#else
+#include <linux/limits.h>
+#include <sys/stat.h>
 #endif
 
 

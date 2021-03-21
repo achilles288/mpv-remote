@@ -13,10 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#include <Winsock2.h>
-#else
-#include <netinet/in.h>
+#ifndef _WIN32
 #include <gcrypt.h>
 #endif
 

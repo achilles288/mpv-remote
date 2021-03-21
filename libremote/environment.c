@@ -16,12 +16,15 @@
 #define REMOTE_EXPORT
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
 #include <Windows.h>
 #include <Shlobj.h>
 #define PATH_MAX _MAX_PATH
+#else
+#include <linux/limits.h>
 #endif
 
 
@@ -38,6 +41,9 @@ REMOTE_EXPORT void remote_environment_process_variables(const char *src,
     int j = 0;
     char c;
     while((c=src[i]) != '\0') {
+        if(j == PATH_MAX-1)
+            break;
+        
         if(c == '$') {
             char value[PATH_MAX];
             #ifdef _WIN32
@@ -50,6 +56,16 @@ REMOTE_EXPORT void remote_environment_process_variables(const char *src,
                 i += 8;
             }
             #else
+            if(strncmp(src+i, "${Videos}", 9) == 0) {
+                strcpy(value, getenv("HOME"));
+                strcat(value, "/Videos");
+                i += 9;
+            }
+            else if(strncmp(src+i, "${Music}", 8) == 0) {
+                strcpy(value, getenv("HOME"));
+                strcat(value, "/Music");
+                i += 8;
+            }
             #endif
             else {
                 dest[j++] = '$';
@@ -68,6 +84,4 @@ REMOTE_EXPORT void remote_environment_process_variables(const char *src,
         }
     }
     dest[j] = '\0';
-
-
 }
