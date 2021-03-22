@@ -181,6 +181,7 @@
 
 
 #media-loader-browser-win {
+  margin-top: -40px;
   width: calc(50% + 80px);
 }
 
@@ -199,7 +200,8 @@
 #browser-navi li {
   float: left;
   padding: 4px;
-  margin: 4px 1px;
+  margin: 1px;
+  font-size: 1.2em;
 }
 
 #browser-navi li:hover {
@@ -222,7 +224,7 @@
 }
 
 #browser-panel {
-  height: calc(25vw + 120px);
+  height: 45vh;
   border: 1px solid #ccc;
   margin-bottom: 16px;
   overflow-y: auto;
@@ -252,13 +254,13 @@
   filter: brightness(50%);
 }
 
-@media only screen and (max-width: 1290px) {
+@media only screen and (max-width: 1150px) {
   .browser-item {
     width: calc(33.333% - 4px);
   }
 }
 
-@media only screen and (max-width: 650px) {
+@media only screen and (max-width: 600px) {
   #media-loader-browser-win {
     width: calc(70% + 30px);
   }
@@ -268,7 +270,7 @@
   }
 
   #browser-panel {
-    height: calc(35vh + 90px);
+    height: calc(49vw + 21px);
   }
 
   .browser-item {

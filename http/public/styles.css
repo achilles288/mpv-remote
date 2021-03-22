@@ -101,6 +101,12 @@ footer {
   background-color: rgba(0, 0, 0, 0.4);
 }
 
+@media only screen and (max-height: 480px) {
+  .modal {
+    padding-top: 60px;
+  }
+}
+
 .modal form
 {
   margin: auto;
