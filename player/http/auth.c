@@ -70,6 +70,7 @@ static const char *get_password_file() {
     mkdir(path, 0700);
     #endif
     strcat(path, "/password");
+    done = 1;
     return path;
 }
 
