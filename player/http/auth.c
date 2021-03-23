@@ -13,8 +13,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <Windows.h>
+#include <Shlobj.h>
+#define PATH_MAX _MAX_PATH
+#else
 #include <gcrypt.h>
+#include <linux/limits.h>
+#include <sys/stat.h>
 #endif
 
 #define DEFAULT_PASSWORD "password"
@@ -48,6 +54,23 @@ static char *load_file(const char *file, const char *mode, size_t *len) {
         *len = i;
 
     return buffer;
+}
+
+static const char *get_password_file() {
+    static char path[PATH_MAX];
+    static int done = 0;
+    if(done)
+        return path;
+    #ifdef _WIN32
+    SHGetSpecialFolderPathA(NULL, path, CSIDL_APPDATA, 0);
+    strcat(path, "/MPV Remote");
+    CreateDirectory(path, NULL);
+    #else
+    snprintf(path, PATH_MAX-10, "%s/.config/mpv-remote", getenv("HOME"));
+    mkdir(path, 0700);
+    #endif
+    strcat(path, "/password");
+    return path;
 }
 
 
@@ -155,14 +178,15 @@ static int authenticate(const char *pswd) {
     dlen = crypt_dlen;
 
     size_t file_length = 0;
-    unsigned char* registered = load_file("http/password", "rb", &file_length);
-
+    unsigned char* registered = load_file(get_password_file(), "rb",
+                                          &file_length);
+    
     // If the hash does not exist or the hash is invalid
     if(registered == NULL || file_length != dlen) {
         if(registered != NULL)
             free(registered);
         // Rewrites a hash from a default password
-        FILE* fp = fopen("http/password", "wb");
+        FILE* fp = fopen(get_password_file(), "wb");
         registered = malloc(dlen);
         crypt_hash(DEFAULT_PASSWORD, registered);
         for(unsigned int i=0; i<dlen; i++)
@@ -224,7 +248,7 @@ int remote_http_change_password(const char* old_pswd, const char* new_pswd) {
     dlen = crypt_dlen;
 
     if(authenticate(old_pswd)) {
-        FILE* fp = fopen("http/password", "wb");
+        FILE* fp = fopen(get_password_file(), "wb");
         char* x = malloc(dlen);
         crypt_hash(new_pswd, x);
         for(unsigned int i=0; i<dlen; i++)
