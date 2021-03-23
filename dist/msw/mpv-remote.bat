@@ -1,0 +1,1 @@
+@ "%~dp0/../mpv-remote.exe" %*

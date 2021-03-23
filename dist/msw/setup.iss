@@ -8,17 +8,20 @@
 
 [Setup]
 AppName=MPV Remote
+AppVersion=1.1.0                 
 AppPublisher=Khant Kyaw Khaung
-AppVersion=1.1.0
 LicenseFile=..\..\LICENSE
-WizardStyle=modern
-DefaultDirName={autopf}\MPV Remote         
-PrivilegesRequired=lowest
+DefaultDirName={autopf}\MPV Remote          
+ChangesAssociations=yes
+DisableProgramGroupPage=yes
+PrivilegesRequiredOverridesAllowed=dialog
+UsePreviousPrivileges=no
 Compression=lzma2
 SolidCompression=yes
 OutputDir=userdocs:MVP Remote Setup
 ArchitecturesAllowed=x64           
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64       
+WizardStyle=modern
 
 #define BuildDirectory "..\..\build\bin"
 
@@ -28,7 +31,9 @@ Source: "..\..\external\bin\*"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BuildDirectory}\mpv-play.exe"; DestDir: "{app}"  
 Source: "{#BuildDirectory}\mpv-remote.exe"; DestDir: "{app}" 
 Source: "{#BuildDirectory}\mpv-remote.dll"; DestDir: "{app}"              
-Source: "mpv-play-start.bat"; DestDir: "{app}"                                               
+Source: "mpv-play-start.bat"; DestDir: "{app}"                              
+Source: "mpv-play.bat"; DestDir: "{app}\cmd"                           
+Source: "mpv-remote.bat"; DestDir: "{app}\cmd"                                            
 
 [Run]
 Filename: "{app}\mpv-play-start.bat"; Description: "{cm:LaunchProgram,MPV remote player}"; Flags: nowait postinstall skipifsilent

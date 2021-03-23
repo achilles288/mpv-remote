@@ -1,2 +1,2 @@
-@mpv-play --kill > NUL
-@mpv-play --start -f
+@"%~dp0/mpv-play" --kill > NUL
+@"%~dp0/mpv-play" --start -f
