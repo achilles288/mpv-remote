@@ -1,0 +1,18 @@
+#ifndef __MPV_REMOTE_HTTP_CONFIG_H__
+#define __MPV_REMOTE_HTTP_CONFIG_H__
+
+/**
+ * @brief The port number where the web page is hosted
+ */
+#define HTTP_PORT 8888
+
+/**
+ * @brief Directory to the static files for HTTP services
+ */
+#ifdef REMOTE_HTTP_PREFIX
+#define HTTP_PREFIX REMOTE_HTTP_PREFIX
+#else
+#define HTTP_PREFIX "${HTTP_PREFIX}"
+#endif
+
+#endif

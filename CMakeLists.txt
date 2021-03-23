@@ -49,6 +49,14 @@ configure_file(
     ${PROJECT_SOURCE_DIR}/libremote/config.h
 )
 
+set(HTTP_PORT 8888)
+set(HTTP_PREFIX http/public)
+
+configure_file(
+    ${PROJECT_SOURCE_DIR}/player/http/config.h.in
+    ${PROJECT_SOURCE_DIR}/player/http/config.h
+)
+
 include_directories(
     ${CMAKE_BINARY_DIR}
     ${MPV_INCLUDE_DIRS}

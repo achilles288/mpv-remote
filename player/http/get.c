@@ -10,6 +10,7 @@
 
 #include "../../libremote/libremote.h"
 #include "auth.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +22,7 @@
 #define PATH_MAX _MAX_PATH
 #else
 #include <dirent.h>
+#include <linux/limits.h>
 #endif
 
 #include <json.h>
@@ -141,7 +143,7 @@ void remote_http_handle_get(
         return;
     
     char file_path[128];
-    snprintf(file_path, 127, PREFIX "%s", url);
+    snprintf(file_path, 127, HTTP_PREFIX "%s", url);
     char *ext = strrchr(url, '.');
     if(ext == NULL) {
         error_answer(con_info, MHD_HTTP_UNSUPPORTED_MEDIA_TYPE);
@@ -205,7 +207,7 @@ static void answer_to_get_special(
     if(strcmp(url, "/") == 0)
         url = "/index.html";
     char file_path[128];
-    snprintf(file_path, 127, PREFIX "%s", url);
+    snprintf(file_path, 127, HTTP_PREFIX "%s", url);
     
     // Prepares the page footer
     static char footer_content[4096];
@@ -213,7 +215,7 @@ static void answer_to_get_special(
     static int footer_read = 0;
     if(!footer_read) {
         size_t file_size;
-        char *buffer = load_file(PREFIX "/footer.html", "r", &file_size);
+        char *buffer = load_file(HTTP_PREFIX "/footer.html", "r", &file_size);
         if(buffer != NULL) {
             int ret = snprintf(footer_content, 4095, buffer,
                                REMOTE_VERSION_STRING);

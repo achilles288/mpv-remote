@@ -20,9 +20,6 @@
 extern "C" {
 #endif
 
-#define PORT 8888 ///< The port number which the web page is hosted
-#define PREFIX "http/public" ///< The directory where HTTP contents are located
-#define POST_BUFFER_SIZE 8192 ///< The size of one packet for POST requests
 #define PARAM_SIZE 256 ///< Maximum length of each param
 
 #define GET_METHOD 1 ///< The GET method

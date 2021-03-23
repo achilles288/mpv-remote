@@ -14,6 +14,7 @@
 
 #include "http.h"
 
+#include "config.h"
 #include "con_type.h"
 
 #include <stdlib.h>
@@ -26,6 +27,8 @@
 #include <ifaddrs.h>
 #include <netdb.h>
 #endif
+
+#define POST_BUFFER_SIZE 8192 ///< The size of one packet for POST requests
 
 
 extern void remote_http_handle_get(
@@ -252,7 +255,7 @@ int remote_http_start_daemon() {
     remote_http_stop_daemon();
     
     http_daemon = MHD_start_daemon(
-        MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
+        MHD_USE_INTERNAL_POLLING_THREAD, HTTP_PORT, NULL, NULL,
         &answer_to_connection, NULL,
         MHD_OPTION_NOTIFY_COMPLETED, &request_completed,
         NULL, MHD_OPTION_END
@@ -260,7 +263,7 @@ int remote_http_start_daemon() {
 
     char ip_addr[16] = "0.0.0.0";
     get_ip_address(ip_addr);
-    printf("HTTP services can be used at http://%s:%d\n", ip_addr, PORT);
+    printf("HTTP services can be used at http://%s:%d\n", ip_addr, HTTP_PORT);
     
     if(http_daemon == NULL)
         return 1;

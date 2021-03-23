@@ -1,0 +1,14 @@
+Source: mpv-remote
+Section: video
+Priority: optional
+Maintainer: Khant Kyaw Khaung <khantkyawkhaung288@gmail.com>
+Build-Depends: debhelper (>=11~), gcc (>=8~), libmpv-dev, libmicrohttpd-dev,
+               libgcrypt20-dev, libjson-c-dev, pkg-config
+Standards-Version: 4.1.4
+
+Package: mpv-remote
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libmpv1, libmicrohttpd12,
+         libgcrypt20, libjson-c4
+Description: Remote-controlled media player for a TV connected to a PC
+ The media player for a TV connected to a PC controlled from a portable laptop or a smart phone via HTTP or SSH connection.

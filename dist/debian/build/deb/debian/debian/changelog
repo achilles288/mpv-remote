@@ -1,0 +1,11 @@
+mpv-remote (1.1.0-0) UNRELEASED; urgency=medium
+
+  * HTTP services added
+
+ -- Khant Kyaw Khaung <khantkyawkhaung288@gmail.com>  Tue, 23 Mar 2021 11:54:54 +0630
+
+mpv-remote (1.0.1-0) UNRELEASED; urgency=medium
+
+  * Initial release.
+
+ -- Khant Kyaw Khaung <khantkyawkhaung288@gmail.com>  Sat, 06 Jun 2020 03:23:50 +0630

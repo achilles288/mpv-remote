@@ -1,4 +1,4 @@
 build
 dist
 libremote/config.h
-test/test-config.h
+player/http/config.h
